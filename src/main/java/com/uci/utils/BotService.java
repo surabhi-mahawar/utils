@@ -1,5 +1,6 @@
 package com.uci.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -8,14 +9,19 @@ import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -24,6 +30,8 @@ public class BotService{
     @Value("${campaign.url}")
     public String CAMPAIGN_URL;
 
+    @Autowired
+    public WebClient webClient;
 
     /**
      * Retrieve Campaign Params From its Name
@@ -32,40 +40,58 @@ public class BotService{
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public String getCampaignFromStartingMessage(String startingMessage) {
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String baseURL = CAMPAIGN_URL + "admin/v1/bot/getByParam/?startingMessage=";
-            ResponseEntity<String> response = restTemplate.getForEntity(baseURL + startingMessage, String.class);
-            if (response.getStatusCode() == HttpStatus.OK) {
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode root = mapper.readTree(response.getBody());
-                JsonNode name = root.path("data").path("name");
-                return name.asText();
-            } else {
-                return null;
-            }
-        } catch (Exception e) {
-            return null;
-        }
+    public Mono<String> getCampaignFromStartingMessage(String startingMessage) {
+        final boolean[] error = {false};
+        webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                    if (response != null) {
+
+                        ObjectMapper mapper = new ObjectMapper();
+                        try {
+                            JsonNode root = mapper.readTree(response);
+                            JsonNode name = root.path("data").path("name");
+                            return Mono.just(name.asText());
+                        } catch (JsonProcessingException jsonMappingException) {
+                            return Mono.just("");
+                        }
+
+                    } else {
+                        return Mono.just("");
+                    }
+                });
+
+        return Mono.just("");
     }
 
-    public String getCurrentAdapter(String botName){
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String baseURL = CAMPAIGN_URL + "admin/v1/bot/get/?name=";
-            ResponseEntity<String> response = restTemplate.getForEntity(baseURL + botName, String.class);
-            if (response.getStatusCode() == HttpStatus.OK) {
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode root = mapper.readTree(response.getBody());
-                ArrayNode login = (ArrayNode) root.path("data").path("logic");
-                return ((JsonNode)login.get(0)).path("adapter").asText();
-            } else {
-                return null;
-            }
-        } catch (Exception e) {
-            return null;
-        }
+    public Mono<String> getCurrentAdapter(String botName){
+
+        final boolean[] error = {false};
+        webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/").queryParam("name", botName).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                    if (response != null) {
+
+                        ObjectMapper mapper = new ObjectMapper();
+                        try {
+                            JsonNode root = mapper.readTree(response);
+                            ArrayNode login = (ArrayNode) root.path("data").path("logic");
+                            String name = ((JsonNode)login.get(0)).path("adapter").asText();
+                            return Mono.just(name);
+                        } catch (JsonProcessingException jsonMappingException) {
+                            return Mono.just("");
+                        }
+
+                    } else {
+                        return Mono.just("");
+                    }
+                });
+
+        return Mono.just("");
     }
 
     public Application getButtonLinkedApp(String appName) {
@@ -134,13 +160,4 @@ public class BotService{
         }
         return currentApplication;
     }
-
-
-    ////////////////////////////
-    //////////////////////////////
-    /**************
-     * Campaign Service Methods
-     */
-
-
 }

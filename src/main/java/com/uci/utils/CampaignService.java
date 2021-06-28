@@ -9,11 +9,11 @@ import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +25,10 @@ public class CampaignService {
     @Value("${campaign.url}")
     public String CAMPAIGN_URL;
 
+
+    @Autowired
+    public WebClient webClient;
+
     /**
      * Retrieve Campaign Params From its Identifier
      *
@@ -32,22 +36,26 @@ public class CampaignService {
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public JsonNode getCampaignFromID(String campaignID) throws Exception {
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String baseURL = CAMPAIGN_URL + "admin/v1/bot/get/" + campaignID;
-            ResponseEntity<String> response = restTemplate.getForEntity(baseURL, String.class);
-            if (response.getStatusCode() == HttpStatus.OK) {
-                ObjectMapper mapper = new ObjectMapper();
-                return mapper.readTree(response.getBody());
-            }else{
-                return null;
-            }
-        }catch (Exception e){
-            return null;
-        }
-    }
+    public Mono<JsonNode> getCampaignFromID(String campaignID) throws Exception {
+        webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/"+ campaignID).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                            if (response != null) {
+                                ObjectMapper mapper = new ObjectMapper();
+                                try {
+                                    return Mono.just(mapper.readTree(response));
+                                } catch (JsonProcessingException e) {
+                                    return null;
+                                }
+                            }
+                            return null;
+                        }
+                );
+        return null;
 
+    }
     /**
      * Retrieve Campaign Params From its Name
      * @param campaignName - Campaign Name
@@ -84,22 +92,26 @@ public class CampaignService {
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public JsonNode getCampaignFromNameTransformer(String campaignName) {
-        RestTemplate restTemplate = new RestTemplate();
-        String url = CAMPAIGN_URL + "admin/v1/bot/search/?name=" + campaignName + "&match=true";
-        ResponseEntity<String> response
-                = restTemplate.getForEntity(url, String.class);
-        if(response.getStatusCode() == HttpStatus.OK){
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                return mapper.readTree(response.getBody()).get("data").get(0);
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }else{
-            return null;
-        }
+    public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
+
+        webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/admin/v1/bot/search/").queryParam("name",campaignName).queryParam("match",true).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                            if (response != null) {
+                                ObjectMapper mapper = new ObjectMapper();
+                                try {
+                                    return Mono.just(mapper.readTree(response).get("data").get(0));
+                                } catch (JsonProcessingException e) {
+                                    return null;
+                                }
+                            }
+                            return null;
+                        }
+                );
+        return null;
+
     }
 
     /**
@@ -109,21 +121,24 @@ public class CampaignService {
      * @return FormID for the first transformer.
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public String getFirstFormByBotID(String botID) {
-        RestTemplate restTemplate = new RestTemplate();
-        String baseURL = CAMPAIGN_URL + "admin/v1/bot/get/";
-        ResponseEntity<String> response = restTemplate.getForEntity(baseURL + botID, String.class);
-        if(response.getStatusCode() == HttpStatus.OK){
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                return mapper.readTree(response.getBody()).findValue("formID").asText();
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }else{
-            return null;
-        }
+    public Mono<String> getFirstFormByBotID(String botID) {
+        webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/"+botID).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                            if (response != null) {
+                                ObjectMapper mapper = new ObjectMapper();
+                                try {
+                                    return Mono.just(mapper.readTree(response).findValue("formID").asText());
+                                } catch (JsonProcessingException e) {
+                                    return null;
+                                }
+                            }
+                            return null;
+                        }
+                );
+        return null;
     }
 
 
@@ -134,21 +149,25 @@ public class CampaignService {
      * @return FormID for the first transformer.
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public ArrayNode getFirstFormHiddenFields(String botID) {
-        RestTemplate restTemplate = new RestTemplate();
-        String baseURL = CAMPAIGN_URL + "/admin/v1/bot/get/";
-        ResponseEntity<String> response = restTemplate.getForEntity(baseURL + botID, String.class);
-        if(response.getStatusCode() == HttpStatus.OK){
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                return (ArrayNode) mapper.readTree(response.getBody()).findValue("hiddenFields");
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }else{
-            return null;
-        }
+    public Mono<ArrayNode> getFirstFormHiddenFields(String botID) {
+        webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/"+botID).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                            if (response != null) {
+                                ObjectMapper mapper = new ObjectMapper();
+                                try {
+                                    return Mono.just(mapper.readTree(response).findValue("hiddenFields"));
+                                } catch (JsonProcessingException e) {
+                                    return null;
+                                }
+                            }
+                            return null;
+                        }
+                );
+        return null;
+
     }
 
     /**
