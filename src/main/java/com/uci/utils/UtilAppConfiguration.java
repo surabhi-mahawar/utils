@@ -9,7 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 @EnableAutoConfiguration
-public class AppConfiguration {
+public class UtilAppConfiguration {
 
 
     @Value("${campaign.url}")

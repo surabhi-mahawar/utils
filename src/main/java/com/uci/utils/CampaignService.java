@@ -9,7 +9,6 @@ import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,28 +16,31 @@ import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
-@Slf4j
+@SuppressWarnings("ReactiveStreamsUnusedPublisher")
 @Service
+@Slf4j
 public class CampaignService {
 
     @Value("${campaign.url}")
     public String CAMPAIGN_URL;
 
 
-    @Autowired
-    public WebClient webClient;
+    //    @Autowired
+    public WebClient webClient = WebClient.builder()
+            .baseUrl("http://uci-dev4.ngrok.samagra.io/")
+            .build();
 
     /**
      * Retrieve Campaign Params From its Identifier
      *
      * @param campaignID - Campaign Identifier
      * @return Application
-     * @throws Exception Error Exception, in failure in Network request.
      */
-    public Mono<JsonNode> getCampaignFromID(String campaignID) throws Exception {
+    public Mono<JsonNode> getCampaignFromID(String campaignID) {
         webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/"+ campaignID).build())
+                .uri(builder -> builder.path("admin/v1/bot/get/" + campaignID).build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
@@ -47,17 +49,18 @@ public class CampaignService {
                                 try {
                                     return Mono.just(mapper.readTree(response));
                                 } catch (JsonProcessingException e) {
-                                    return null;
+                                    return Mono.empty();
                                 }
                             }
-                            return null;
+                            return Mono.empty();
                         }
-                );
-        return null;
-
+                ).doOnError(throwable -> log.error("Error in fetching Campaign Information from ID >>> " + throwable.getMessage()));
+        return Mono.empty();
     }
+
     /**
      * Retrieve Campaign Params From its Name
+     *
      * @param campaignName - Campaign Name
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
@@ -74,9 +77,9 @@ public class CampaignService {
 
 
         Application currentApplication = null;
-        if(applications.size() > 0){
-            for(Application application: applications){
-                if(application.name.equals(campaignName)){
+        if (applications.size() > 0) {
+            for (Application application : applications) {
+                if (application.name.equals(campaignName)) {
                     currentApplication = application;
                 }
             }
@@ -90,27 +93,30 @@ public class CampaignService {
      *
      * @param campaignName - Campaign Name
      * @return Application
-     * @throws Exception Error Exception, in failure in Network request.
      */
     public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
-
-        webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/admin/v1/bot/search/").queryParam("name",campaignName).queryParam("match",true).build())
+       return webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(response -> {
-                            if (response != null) {
-                                ObjectMapper mapper = new ObjectMapper();
-                                try {
-                                    return Mono.just(mapper.readTree(response).get("data").get(0));
-                                } catch (JsonProcessingException e) {
-                                    return null;
-                                }
-                            }
-                            return null;
-                        }
-                );
-        return null;
+                .map(new Function<String, JsonNode>() {
+                         @Override
+                         public JsonNode apply(String response) {
+                             if (response != null) {
+                                 ObjectMapper mapper = new ObjectMapper();
+                                 try {
+                                     return mapper.readTree(response).get("data").get(0);
+                                 } catch (JsonProcessingException e) {
+                                     return null;
+                                 }
+                             }
+                             return null;
+                         }
+                     }
+                ).doOnError(throwable -> {
+            log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
+        });
+
 
     }
 
@@ -119,26 +125,27 @@ public class CampaignService {
      *
      * @param botID - Bot ID
      * @return FormID for the first transformer.
-     * @throws Exception Error Exception, in failure in Network request.
      */
     public Mono<String> getFirstFormByBotID(String botID) {
-        webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/"+botID).build())
+       return webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(response -> {
-                            if (response != null) {
-                                ObjectMapper mapper = new ObjectMapper();
-                                try {
-                                    return Mono.just(mapper.readTree(response).findValue("formID").asText());
-                                } catch (JsonProcessingException e) {
-                                    return null;
-                                }
-                            }
-                            return null;
-                        }
-                );
-        return null;
+                .map(new Function<String, String>() {
+                         @Override
+                         public String apply(String response) {
+                             if (response != null) {
+                                 ObjectMapper mapper = new ObjectMapper();
+                                 try {
+                                     return mapper.readTree(response).findValue("formID").asText();
+                                 } catch (JsonProcessingException e) {
+                                     return null;
+                                 }
+                             }
+                             return null;
+                         }
+                     }
+                ).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
     }
 
 
@@ -150,22 +157,22 @@ public class CampaignService {
      * @throws Exception Error Exception, in failure in Network request.
      */
     public Mono<ArrayNode> getFirstFormHiddenFields(String botID) {
-        webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/"+botID).build())
-                .retrieve()
-                .bodyToMono(String.class)
-                .map(response -> {
-                            if (response != null) {
-                                ObjectMapper mapper = new ObjectMapper();
-                                try {
-                                    return Mono.just(mapper.readTree(response).findValue("hiddenFields"));
-                                } catch (JsonProcessingException e) {
-                                    return null;
-                                }
-                            }
-                            return null;
-                        }
-                );
+//        return webClient.get()
+//                .uri(builder -> builder.path("admin/v1/bot/get/"+botID).build())
+//                .retrieve()
+//                .bodyToMono(String.class)
+//                .map(response -> {
+//                            if (response != null) {
+//                                ObjectMapper mapper = new ObjectMapper();
+//                                try {
+//                                    return Mono.just(mapper.readTree(response).findValue("hiddenFields"));
+//                                } catch (JsonProcessingException e) {
+//                                    return null;
+//                                }
+//                            }
+//                            return null;
+//                        }
+//                );
         return null;
 
     }
@@ -194,7 +201,7 @@ public class CampaignService {
                     if (application.data.get("appName").equals(campaignName)) {
                         currentApplication = application;
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
 
                 }
             }

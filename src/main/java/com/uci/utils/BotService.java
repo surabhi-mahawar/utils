@@ -11,10 +11,7 @@ import io.fusionauth.domain.api.ApplicationResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -23,25 +20,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("ALL")
 @Service
 @Slf4j
-public class BotService{
+public class BotService {
 
     @Value("${campaign.url}")
     public String CAMPAIGN_URL;
 
     @Autowired
-    public WebClient webClient;
+    public WebClient webClient = WebClient.builder()
+            .baseUrl("http://uci-dev4.ngrok.samagra.io/")
+            .build();
 
     /**
      * Retrieve Campaign Params From its Name
      *
      * @param startingMessage - Starting Message
      * @return Application
-     * @throws Exception Error Exception, in failure in Network request.
      */
     public Mono<String> getCampaignFromStartingMessage(String startingMessage) {
-        final boolean[] error = {false};
         webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
                 .retrieve()
@@ -61,27 +59,27 @@ public class BotService{
                     } else {
                         return Mono.just("");
                     }
-                });
-
+                }).doOnError(throwable -> System.out.println("Error in getting campaign" + throwable.getMessage()));
         return Mono.just("");
     }
 
-    public Mono<String> getCurrentAdapter(String botName){
-
-        final boolean[] error = {false};
+    public Mono<String> getCurrentAdapter(String botName) {
         webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/get/").queryParam("name", botName).build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
                     if (response != null) {
-
                         ObjectMapper mapper = new ObjectMapper();
                         try {
                             JsonNode root = mapper.readTree(response);
-                            ArrayNode login = (ArrayNode) root.path("data").path("logic");
-                            String name = ((JsonNode)login.get(0)).path("adapter").asText();
-                            return Mono.just(name);
+                            ArrayNode login = (ArrayNode) root.path("data");
+                            for (int i = 0; i < login.size(); i++) {
+                                if (login.get(i).has("name") && login.get(i).get("name").asText().equals(botName)) {
+                                    return Mono.just((((JsonNode) ((ArrayNode) login.get(i).path("logic"))).get(0).path("adapter")).asText());
+                                }
+                            }
+                            return Mono.just("");
                         } catch (JsonProcessingException jsonMappingException) {
                             return Mono.just("");
                         }
@@ -90,13 +88,13 @@ public class BotService{
                         return Mono.just("");
                     }
                 });
-
         return Mono.just("");
+
     }
 
     public Application getButtonLinkedApp(String appName) {
         try {
-            Application application = this.getCampaignFromName(appName);
+            Application application = getCampaignFromName(appName);
             String buttonLinkedAppID = (String) ((ArrayList<Map>) application.data.get("parts")).get(0).get("buttonLinkedApp");
             Application linkedApplication = BotService.getCampaignFromID(buttonLinkedAppID);
             return linkedApplication;
@@ -131,11 +129,9 @@ public class BotService{
         System.out.println("Client: " + staticClient);
         ClientResponse<ApplicationResponse, Void> applicationResponse = staticClient.retrieveApplication(UUID.fromString(campaignID));
         if (applicationResponse.wasSuccessful()) {
-            Application application = applicationResponse.successResponse.application;
-            return application;
+            return applicationResponse.successResponse.application;
         } else if (applicationResponse.exception != null) {
-            Exception exception = applicationResponse.exception;
-            throw exception;
+            throw applicationResponse.exception;
         }
         return null;
     }
@@ -145,9 +141,8 @@ public class BotService{
      *
      * @param campaignName - Campaign Name
      * @return Application
-     * @throws Exception Error Exception, in failure in Network request.
      */
-    public static Application getCampaignFromName(String campaignName) throws Exception {
+    private Application getCampaignFromName(String campaignName) {
         List<Application> applications = getApplications();
 
         Application currentApplication = null;
