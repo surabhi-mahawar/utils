@@ -95,7 +95,7 @@ public class CampaignService {
      * @return Application
      */
     public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
-       return webClient.get()
+        return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -114,8 +114,8 @@ public class CampaignService {
                          }
                      }
                 ).doOnError(throwable -> {
-            log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
-        });
+                    log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
+                }).onErrorReturn(null);
 
 
     }
@@ -127,7 +127,7 @@ public class CampaignService {
      * @return FormID for the first transformer.
      */
     public Mono<String> getFirstFormByBotID(String botID) {
-       return webClient.get()
+        return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -145,7 +145,7 @@ public class CampaignService {
                              return null;
                          }
                      }
-                ).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
     }
 
 

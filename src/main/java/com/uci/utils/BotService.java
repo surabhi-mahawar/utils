@@ -40,7 +40,7 @@ public class BotService {
      * @return Application
      */
     public Mono<String> getCampaignFromStartingMessage(String startingMessage) {
-        webClient.get()
+        return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -51,20 +51,20 @@ public class BotService {
                         try {
                             JsonNode root = mapper.readTree(response);
                             JsonNode name = root.path("data").path("name");
-                            return Mono.just(name.asText());
+                            return name.asText();
                         } catch (JsonProcessingException jsonMappingException) {
-                            return Mono.just("");
+                            return"";
                         }
 
                     } else {
-                        return Mono.just("");
+                        return "";
                     }
-                }).doOnError(throwable -> System.out.println("Error in getting campaign" + throwable.getMessage()));
-        return Mono.just("");
+                }).onErrorReturn("").doOnError(throwable -> System.out.println("Error in getting campaign" + throwable.getMessage()));
+
     }
 
     public Mono<String> getCurrentAdapter(String botName) {
-        webClient.get()
+       return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/get/").queryParam("name", botName).build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -76,19 +76,19 @@ public class BotService {
                             ArrayNode login = (ArrayNode) root.path("data");
                             for (int i = 0; i < login.size(); i++) {
                                 if (login.get(i).has("name") && login.get(i).get("name").asText().equals(botName)) {
-                                    return Mono.just((((JsonNode) ((ArrayNode) login.get(i).path("logic"))).get(0).path("adapter")).asText());
+                                    return (((JsonNode) ((ArrayNode) login.get(i).path("logic"))).get(0).path("adapter")).asText();
                                 }
                             }
-                            return Mono.just("");
+                            return null;
                         } catch (JsonProcessingException jsonMappingException) {
-                            return Mono.just("");
+                            return null;
                         }
 
                     } else {
-                        return Mono.just("");
                     }
-                });
-        return Mono.just("");
+                    return null;
+                }).onErrorReturn("").
+        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
 
     }
 
