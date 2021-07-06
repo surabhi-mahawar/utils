@@ -30,7 +30,7 @@ public class BotService {
 
     @Autowired
     public WebClient webClient = WebClient.builder()
-            .baseUrl("http://uci-dev4.ngrok.samagra.io/")
+            .baseUrl("http://uci-dev6.ngrok.samagra.io/")
             .build();
 
     /**
@@ -53,7 +53,7 @@ public class BotService {
                             JsonNode name = root.path("data").path("name");
                             return name.asText();
                         } catch (JsonProcessingException jsonMappingException) {
-                            return"";
+                            return "";
                         }
 
                     } else {
@@ -64,8 +64,8 @@ public class BotService {
     }
 
     public Mono<String> getCurrentAdapter(String botName) {
-       return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/").queryParam("name", botName).build())
+        return webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
@@ -73,11 +73,10 @@ public class BotService {
                         ObjectMapper mapper = new ObjectMapper();
                         try {
                             JsonNode root = mapper.readTree(response);
-                            ArrayNode login = (ArrayNode) root.path("data");
-                            for (int i = 0; i < login.size(); i++) {
-                                if (login.get(i).has("name") && login.get(i).get("name").asText().equals(botName)) {
-                                    return (((JsonNode) ((ArrayNode) login.get(i).path("logic"))).get(0).path("adapter")).asText();
-                                }
+                            JsonNode name = root.path("data");
+                            if (name.has("name") && name.get("name").asText().equals(botName)) {
+                                return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
+
                             }
                             return null;
                         } catch (JsonProcessingException jsonMappingException) {
@@ -88,7 +87,7 @@ public class BotService {
                     }
                     return null;
                 }).onErrorReturn("").
-        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
+                        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
 
     }
 

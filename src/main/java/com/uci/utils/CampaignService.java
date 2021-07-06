@@ -29,7 +29,7 @@ public class CampaignService {
 
     //    @Autowired
     public WebClient webClient = WebClient.builder()
-            .baseUrl("http://uci-dev4.ngrok.samagra.io/")
+            .baseUrl("http://uci-dev6.ngrok.samagra.io/")
             .build();
 
     /**
