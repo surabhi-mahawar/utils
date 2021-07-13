@@ -18,6 +18,6 @@ public class CommonProducer {
 
   public void send(String topic, String message) throws JsonProcessingException {
 	  log.info("Message being publish to {} topic ",topic);
-    log.info("published {}", new ObjectMapper().writeValueAsString(simpleProducer.send(topic, message)));
+      log.info("published {}", new ObjectMapper().writeValueAsString(simpleProducer.send(topic, message)));
   }
 }

@@ -8,6 +8,9 @@ import com.inversoft.rest.ClientResponse;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,15 +26,12 @@ import java.util.UUID;
 @SuppressWarnings("ALL")
 @Service
 @Slf4j
+@AllArgsConstructor
+@Getter
+@Setter
 public class BotService {
 
-    @Value("${campaign.url}")
-    public String CAMPAIGN_URL;
-
-    @Autowired
-    public WebClient webClient = WebClient.builder()
-            .baseUrl("http://uci-dev6.ngrok.samagra.io/")
-            .build();
+    public WebClient webClient;
 
     /**
      * Retrieve Campaign Params From its Name
@@ -95,7 +95,7 @@ public class BotService {
         try {
             Application application = getCampaignFromName(appName);
             String buttonLinkedAppID = (String) ((ArrayList<Map>) application.data.get("parts")).get(0).get("buttonLinkedApp");
-            Application linkedApplication = BotService.getCampaignFromID(buttonLinkedAppID);
+            Application linkedApplication = this.getCampaignFromID(buttonLinkedAppID);
             return linkedApplication;
         } catch (Exception e) {
             e.printStackTrace();

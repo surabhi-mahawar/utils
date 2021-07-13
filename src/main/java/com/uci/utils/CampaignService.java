@@ -8,6 +8,7 @@ import com.inversoft.rest.ClientResponse;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,16 +22,10 @@ import java.util.function.Function;
 @SuppressWarnings("ReactiveStreamsUnusedPublisher")
 @Service
 @Slf4j
+@AllArgsConstructor
 public class CampaignService {
 
-    @Value("${campaign.url}")
-    public String CAMPAIGN_URL;
-
-
-    //    @Autowired
-    public WebClient webClient = WebClient.builder()
-            .baseUrl("http://uci-dev6.ngrok.samagra.io/")
-            .build();
+    public WebClient webClient;
 
     /**
      * Retrieve Campaign Params From its Identifier
