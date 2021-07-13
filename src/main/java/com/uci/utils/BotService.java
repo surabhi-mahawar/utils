@@ -8,6 +8,9 @@ import com.inversoft.rest.ClientResponse;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,15 +26,12 @@ import java.util.UUID;
 @SuppressWarnings("ALL")
 @Service
 @Slf4j
+@AllArgsConstructor
+@Getter
+@Setter
 public class BotService {
 
-    @Value("${campaign.url}")
-    public String CAMPAIGN_URL;
-
-    @Autowired
-    public WebClient webClient = WebClient.builder()
-            .baseUrl("http://uci-dev4.ngrok.samagra.io/")
-            .build();
+    public WebClient webClient;
 
     /**
      * Retrieve Campaign Params From its Name
@@ -53,7 +53,7 @@ public class BotService {
                             JsonNode name = root.path("data").path("name");
                             return name.asText();
                         } catch (JsonProcessingException jsonMappingException) {
-                            return"";
+                            return "";
                         }
 
                     } else {
@@ -64,8 +64,8 @@ public class BotService {
     }
 
     public Mono<String> getCurrentAdapter(String botName) {
-       return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/").queryParam("name", botName).build())
+        return webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
@@ -73,11 +73,10 @@ public class BotService {
                         ObjectMapper mapper = new ObjectMapper();
                         try {
                             JsonNode root = mapper.readTree(response);
-                            ArrayNode login = (ArrayNode) root.path("data");
-                            for (int i = 0; i < login.size(); i++) {
-                                if (login.get(i).has("name") && login.get(i).get("name").asText().equals(botName)) {
-                                    return (((JsonNode) ((ArrayNode) login.get(i).path("logic"))).get(0).path("adapter")).asText();
-                                }
+                            JsonNode name = root.path("data");
+                            if (name.has("name") && name.get("name").asText().equals(botName)) {
+                                return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
+
                             }
                             return null;
                         } catch (JsonProcessingException jsonMappingException) {
@@ -88,7 +87,7 @@ public class BotService {
                     }
                     return null;
                 }).onErrorReturn("").
-        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
+                        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
 
     }
 
@@ -96,7 +95,7 @@ public class BotService {
         try {
             Application application = getCampaignFromName(appName);
             String buttonLinkedAppID = (String) ((ArrayList<Map>) application.data.get("parts")).get(0).get("buttonLinkedApp");
-            Application linkedApplication = BotService.getCampaignFromID(buttonLinkedAppID);
+            Application linkedApplication = this.getCampaignFromID(buttonLinkedAppID);
             return linkedApplication;
         } catch (Exception e) {
             e.printStackTrace();
