@@ -21,30 +21,31 @@ import java.util.UUID;
 public class Telemetry {
 
   private static final ObjectMapper mapper = new ObjectMapper();
+
   private String eid;
 
- 
   private long ets ;
 
- 
   private String ver;
 
- 
   private String mid;
 
- 
   private Actor actor;
 
- 
   private Context context;
 
- 
   private Target object;
 
- 
   private Map<String, Object> edata;
 
- 
   private List<String> tags;
 
+  public static String getTelemetryRequestData(Telemetry telemetry) {
+    String event = "";
+    try {
+      event = mapper.writeValueAsString(telemetry);
+    } catch (Exception e) {
+    }
+    return event;
+  }
 }
