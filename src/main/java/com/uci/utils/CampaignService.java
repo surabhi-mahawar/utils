@@ -142,6 +142,28 @@ public class CampaignService {
                 ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
     }
 
+    public Mono<String> getBotNameByBotID(String botID) {
+        return webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(new Function<String, String>() {
+                         @Override
+                         public String apply(String response) {
+                             if (response != null) {
+                                 ObjectMapper mapper = new ObjectMapper();
+                                 try {
+                                     return mapper.readTree(response).get("data").get("name").asText();
+                                 } catch (JsonProcessingException e) {
+                                     return null;
+                                 }
+                             }
+                             return null;
+                         }
+                     }
+                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+    }
+
 
     /**
      * Retrieve Campaign Params From its Name
