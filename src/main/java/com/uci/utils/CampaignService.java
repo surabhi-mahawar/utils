@@ -26,6 +26,7 @@ import java.util.function.Function;
 public class CampaignService {
 
     public WebClient webClient;
+    public FusionAuthClient fusionAuthClient;
 
     /**
      * Retrieve Campaign Params From its Identifier
@@ -61,8 +62,7 @@ public class CampaignService {
      */
     public Application getCampaignFromName(String campaignName) throws Exception {
         List<Application> applications = new ArrayList<>();
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        ClientResponse<ApplicationResponse, Void> response = staticClient.retrieveApplications();
+        ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
             applications = response.successResponse.applications;
         } else if (response.exception != null) {
@@ -202,8 +202,7 @@ public class CampaignService {
      */
     public Application getCampaignFromNameESamwad(String campaignName) {
         List<Application> applications = new ArrayList<>();
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        ClientResponse<ApplicationResponse, Void> response = staticClient.retrieveApplications();
+        ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
             applications = response.successResponse.applications;
         } else if (response.exception != null) {
