@@ -12,8 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -32,6 +30,7 @@ import java.util.UUID;
 public class BotService {
 
     public WebClient webClient;
+    public FusionAuthClient fusionAuthClient;
 
     /**
      * Retrieve Campaign Params From its Name
@@ -103,10 +102,9 @@ public class BotService {
         return null;
     }
 
-    private static List<Application> getApplications() {
+    private List<Application> getApplications() {
         List<Application> applications = new ArrayList<>();
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        ClientResponse<ApplicationResponse, Void> response = staticClient.retrieveApplications();
+        ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
             applications = response.successResponse.applications;
         } else if (response.exception != null) {
@@ -122,11 +120,8 @@ public class BotService {
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public static Application getCampaignFromID(String campaignID) throws Exception {
-        System.out.println("CampaignID: " + campaignID);
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        System.out.println("Client: " + staticClient);
-        ClientResponse<ApplicationResponse, Void> applicationResponse = staticClient.retrieveApplication(UUID.fromString(campaignID));
+    public Application getCampaignFromID(String campaignID) throws Exception {
+        ClientResponse<ApplicationResponse, Void> applicationResponse = fusionAuthClient.retrieveApplication(UUID.fromString(campaignID));
         if (applicationResponse.wasSuccessful()) {
             return applicationResponse.successResponse.application;
         } else if (applicationResponse.exception != null) {
@@ -154,4 +149,33 @@ public class BotService {
         }
         return currentApplication;
     }
+
+    public Mono<Boolean> updateUser(String userID, String botName) {
+        return Mono.just(true);
+    }
+//        return webClient.get()
+//                .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
+//                .retrieve()
+//                .bodyToMono(String.class)
+//                .map(response -> {
+//                    if (response != null) {
+//                        ObjectMapper mapper = new ObjectMapper();
+//                        try {
+//                            JsonNode root = mapper.readTree(response);
+//                            JsonNode name = root.path("data");
+//                            if (name.has("name") && name.get("name").asText().equals(botName)) {
+//                                return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
+//
+//                            }
+//                            return null;
+//                        } catch (JsonProcessingException jsonMappingException) {
+//                            return null;
+//                        }
+//
+//                    } else {
+//                    }
+//                    return null;
+//                }).onErrorReturn("").
+//                        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
+//    }
 }
