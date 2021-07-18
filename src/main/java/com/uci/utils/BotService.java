@@ -12,14 +12,18 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 @SuppressWarnings("ALL")
 @Service
@@ -90,6 +94,43 @@ public class BotService {
 
     }
 
+    public Mono<String> getBotIDFromBotName(String botName) {
+        return webClient.get()
+                .uri(new Function<UriBuilder, URI>() {
+                    @Override
+                    public URI apply(UriBuilder builder) {
+                        URI uri = builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build();
+                        return uri;
+                    }
+                })
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(new Function<String, String>() {
+                    @Override
+                    public String apply(String response) {
+                        if (response != null) {
+                            ObjectMapper mapper = new ObjectMapper();
+                            try {
+                                JsonNode root = mapper.readTree(response);
+                                JsonNode name = root.path("data");
+                                if (name.has("name") && name.get("name").asText().equals(botName)) {
+                                    return ((JsonNode) ((JsonNode) name.path("id"))).asText();
+
+                                }
+                                return null;
+                            } catch (JsonProcessingException jsonMappingException) {
+                                return null;
+                            }
+
+                        } else {
+                        }
+                        return null;
+                    }
+                })
+                .doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
+
+    }
+
     public Application getButtonLinkedApp(String appName) {
         try {
             Application application = getCampaignFromName(appName);
@@ -150,32 +191,42 @@ public class BotService {
         return currentApplication;
     }
 
-    public Mono<Boolean> updateUser(String userID, String botName) {
-        return Mono.just(true);
+    public Mono<Pair<Boolean, String>> updateUser(String userID, String botName) {
+        return getBotIDFromBotName(botName)
+                .doOnError(e -> log.error(e.getMessage()))
+                .flatMap(new Function<String, Mono<Pair<Boolean, String>>>() {
+                    @Override
+                    public Mono<Pair<Boolean, String>> apply(String botID) {
+                        return webClient
+                                .get()
+                                .uri(new Function<UriBuilder, URI>() {
+                                    @Override
+                                    public URI apply(UriBuilder builder) {
+                                        String base = String.format("/admin/v1/userSegment/addUser/%s/%s", botID, userID);
+                                        URI uri = builder.path(base).build();
+                                        return uri;
+                                    }
+                                })
+                                .retrieve()
+                                .bodyToMono(String.class)
+                                .map(response -> {
+                                    if (response != null) {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        try {
+                                            JsonNode root = mapper.readTree(response);
+                                            Boolean status = root.path("status").asText().equalsIgnoreCase("Success");
+                                            String userID = root.path("userID").asText();
+                                            return Pair.of(status, userID);
+                                        } catch (JsonProcessingException jsonMappingException) {
+                                            return Pair.of(false, "");
+                                        }
+                                    } else {
+                                        return Pair.of(false, "");
+                                    }
+                                })
+                                .onErrorReturn(Pair.of(false, ""))
+                                .doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
+                    }
+                });
     }
-//        return webClient.get()
-//                .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
-//                .retrieve()
-//                .bodyToMono(String.class)
-//                .map(response -> {
-//                    if (response != null) {
-//                        ObjectMapper mapper = new ObjectMapper();
-//                        try {
-//                            JsonNode root = mapper.readTree(response);
-//                            JsonNode name = root.path("data");
-//                            if (name.has("name") && name.get("name").asText().equals(botName)) {
-//                                return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
-//
-//                            }
-//                            return null;
-//                        } catch (JsonProcessingException jsonMappingException) {
-//                            return null;
-//                        }
-//
-//                    } else {
-//                    }
-//                    return null;
-//                }).onErrorReturn("").
-//                        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
-//    }
 }
