@@ -25,14 +25,10 @@ public class KafkaConfig {
 	 *
 	 * Returns AdminClient
 	 */
-	public AdminClient kafkaAdminClient(String server) {
+	@Bean
+	public AdminClient kafkaAdminClient() {
 		Properties properties = new Properties();
-		/* If server url empty, set server url from utils */
-		if(server.isEmpty()) {
-			server = kafkaServerUrl;
-		}
-		System.out.println(server);
-		properties.put("bootstrap.servers", server);
+		properties.put("bootstrap.servers", kafkaServerUrl);
 		properties.put("connections.max.idle.ms", 100000);
 		properties.put("request.timeout.ms", 5000);
 		return AdminClient.create(properties);
@@ -44,9 +40,10 @@ public class KafkaConfig {
 	 * 
 	 * @return kafka health indicator
 	 */
-	public HealthIndicator kafkaHealthIndicator(String server) {
+	@Bean
+	public HealthIndicator kafkaHealthIndicator() {
 		final DescribeClusterOptions describeClusterOptions = new DescribeClusterOptions().timeoutMs(1000);
-		final AdminClient adminClient = kafkaAdminClient(server);
+		final AdminClient adminClient = kafkaAdminClient();
 		return () -> {
 			final DescribeClusterResult describeCluster = adminClient.describeCluster(describeClusterOptions);
 			try {
