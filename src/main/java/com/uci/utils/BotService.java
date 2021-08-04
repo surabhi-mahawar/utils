@@ -13,12 +13,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,23 @@ public class BotService {
                     }
                 }).onErrorReturn("").doOnError(throwable -> System.out.println("Error in getting campaign" + throwable.getMessage()));
 
+    }
+    
+    /**
+     * Check if a url connection returns ok
+     *
+     * @return Boolean
+     */
+    public Boolean statusUrlCheck(String url) throws IOException {
+    	try {
+    		ResponseEntity<String> result = webClient.get().uri(url).retrieve().toEntity(String.class).block();
+        	if(result.getStatusCodeValue() == 200) {
+    			return true;
+            }
+    	} catch (Exception ex) {
+    		//
+    	}
+    	return false;
     }
 
     public Mono<String> getCurrentAdapter(String botName) {
