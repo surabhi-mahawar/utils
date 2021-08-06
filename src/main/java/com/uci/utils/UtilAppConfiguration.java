@@ -14,11 +14,16 @@ public class UtilAppConfiguration {
 
     @Value("${campaign.url}")
     public String CAMPAIGN_URL;
+    
+
+	@Value("${campaign.admin.token}")
+	private String CAMPAIGN_ADMIN_TOKEN;
 
     @Bean
     public WebClient getWebClient() {
         return WebClient.builder()
                 .baseUrl(CAMPAIGN_URL)
+                .defaultHeader("admin-token", CAMPAIGN_ADMIN_TOKEN)
                 .build();
     }
 

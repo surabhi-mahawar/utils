@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -49,7 +50,6 @@ public class BotService {
     public Mono<String> getCampaignFromStartingMessage(String startingMessage) {
         return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
-                .header(getAdminTokenKey(), getAdminTokenValue())
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
@@ -78,7 +78,6 @@ public class BotService {
     public Mono<String> getCurrentAdapter(String botName) {
         return webClient.get()
         		.uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
-        		.header(getAdminTokenKey(), getAdminTokenValue())
         		.retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
@@ -115,7 +114,6 @@ public class BotService {
                         return uri;
                     }
                 })
-                .header(getAdminTokenKey(), getAdminTokenValue())
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(new Function<String, String>() {
@@ -224,7 +222,6 @@ public class BotService {
                                         return uri;
                                     }
                                 })
-                                .header(getAdminTokenKey(), getAdminTokenValue())
                                 .retrieve()
                                 .bodyToMono(String.class)
                                 .map(response -> {
@@ -261,23 +258,5 @@ public class BotService {
      */
     private Boolean isApiResponseOk(String responseCode) {
     	return responseCode.equals("OK");
-    }
-    
-    /**
-     * Get admin token key for api header
-     * 
-     * @return String
-     */
-    private String getAdminTokenKey() {
-    	return "admin-token";
-    }
-    
-    /**
-     * Get admin token value for api header
-     * 
-     * @return String
-     */
-    private String getAdminTokenValue() {
-    	return "EXnYOvDx4KFqcQkdXqI38MHgFvnJcxMS";
     }
 }
