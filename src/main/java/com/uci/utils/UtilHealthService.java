@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -17,6 +18,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.uci.utils.kafka.KafkaConfig;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class UtilHealthService {
 	@Value("${campaign.url}")
@@ -60,7 +64,7 @@ public class UtilHealthService {
 	 * @throws JsonProcessingException
 	 */
 	public JsonNode getCampaignUrlHealthNode() throws IOException, JsonProcessingException {
-		Boolean campaignStatus = botService.statusUrlCheck(campaignUrl);
+		Boolean campaignStatus = getIsCampaignHealthy();
     	
 		/* Result node */
     	ObjectMapper mapper = new ObjectMapper();
@@ -99,4 +103,29 @@ public class UtilHealthService {
 	private Boolean getIsKafkaHealthy(HealthIndicator kafkaHealthIndicator) {
 		return kafkaHealthIndicator.getHealth(false).getStatus().toString().equals("UP");
 	}
+	
+	/**
+	 * Get is campaign url healthy or not
+	 * 
+	 * @return Boolean
+	 */
+	private Boolean getIsCampaignHealthy() {
+    	ObjectMapper mapper = new ObjectMapper();
+    	try {
+	    	WebClient webClient = WebClient.create(campaignUrl);
+			
+	    	String responseBody = webClient.get()
+	    			.uri(builder -> builder.path("admin/v1/health").build())
+	    			.retrieve()
+	                .bodyToMono(String.class)
+	                .block();
+	    	
+			JsonNode root = mapper.readTree(responseBody);
+			return root.path("result").get("healty").asBoolean();
+		} catch (Exception e) {
+			log.info(e.getMessage());
+//			System.out.println(e.getMessage());
+		}
+    	return false;
+    }
 }
