@@ -12,16 +12,23 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
+
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 @SuppressWarnings("ALL")
 @Service
@@ -32,6 +39,7 @@ import java.util.UUID;
 public class BotService {
 
     public WebClient webClient;
+    public FusionAuthClient fusionAuthClient;
 
     /**
      * Retrieve Campaign Params From its Name
@@ -46,12 +54,15 @@ public class BotService {
                 .bodyToMono(String.class)
                 .map(response -> {
                     if (response != null) {
-
                         ObjectMapper mapper = new ObjectMapper();
                         try {
                             JsonNode root = mapper.readTree(response);
-                            JsonNode name = root.path("data").path("name");
-                            return name.asText();
+                            String responseCode = root.path("responseCode").asText();
+                            if(isApiResponseOk(responseCode)) {
+                            	JsonNode name = root.path("result").path("data").path("name");
+                            	return name.asText();
+                            }
+                            return "";
                         } catch (JsonProcessingException jsonMappingException) {
                             return "";
                         }
@@ -59,41 +70,27 @@ public class BotService {
                     } else {
                         return "";
                     }
-                }).onErrorReturn("").doOnError(throwable -> System.out.println("Error in getting campaign" + throwable.getMessage()));
-
-    }
-    
-    /**
-     * Check if a url connection returns ok
-     *
-     * @return Boolean
-     */
-    public Boolean statusUrlCheck(String url) throws IOException {
-    	try {
-    		ResponseEntity<String> result = webClient.get().uri(url).retrieve().toEntity(String.class).block();
-        	if(result.getStatusCodeValue() == 200) {
-    			return true;
-            }
-    	} catch (Exception ex) {
-    		//
-    	}
-    	return false;
+                })
+                .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                .onErrorReturn("");
     }
 
     public Mono<String> getCurrentAdapter(String botName) {
         return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
-                .retrieve()
+        		.uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build())
+        		.retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
-                    if (response != null) {
+                	if (response != null) {                    	
                         ObjectMapper mapper = new ObjectMapper();
                         try {
                             JsonNode root = mapper.readTree(response);
-                            JsonNode name = root.path("data");
-                            if (name.has("name") && name.get("name").asText().equals(botName)) {
-                                return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
-
+                            String responseCode = root.path("responseCode").asText();
+                            if(isApiResponseOk(responseCode)) {
+                            	JsonNode name = root.path("result").path("data");
+                                if (name.has("name") && name.get("name").asText().equals(botName)) {
+                                    return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
+                                }
                             }
                             return null;
                         } catch (JsonProcessingException jsonMappingException) {
@@ -103,10 +100,51 @@ public class BotService {
                     } else {
                     }
                     return null;
-                }).onErrorReturn("").
-                        doOnError(throwable -> System.out.println("Error in getting adapter >> " + throwable.getMessage()));
-
+                })
+                .doOnError(throwable -> log.info("Error in getting adpater: " + throwable.getMessage()))
+                .onErrorReturn("");
     }
+
+    public Mono<String> getBotIDFromBotName(String botName) {
+        return webClient.get()
+                .uri(new Function<UriBuilder, URI>() {
+                    @Override
+                    public URI apply(UriBuilder builder) {
+                        URI uri = builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build();
+                        return uri;
+                    }
+                })
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(new Function<String, String>() {
+                    @Override
+                    public String apply(String response) {
+                        if (response != null) {
+                            ObjectMapper mapper = new ObjectMapper();
+                            try {
+                                JsonNode root = mapper.readTree(response);
+                                String responseCode = root.path("responseCode").asText();
+                                if(isApiResponseOk(responseCode)) {
+                                	JsonNode name = root.path("result").path("data");
+	                                if (name.has("name") && name.get("name").asText().equals(botName)) {
+	                                    return ((JsonNode) ((JsonNode) name.path("id"))).asText();
+	
+	                                }
+                                }
+                                return null;
+                            } catch (JsonProcessingException jsonMappingException) {
+                                return null;
+                            }
+
+                        } else {
+                        }
+                        return null;
+                    }
+                })
+                .doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+                .onErrorReturn("");
+    }
+    
 
     public Application getButtonLinkedApp(String appName) {
         try {
@@ -120,10 +158,9 @@ public class BotService {
         return null;
     }
 
-    private static List<Application> getApplications() {
+    private List<Application> getApplications() {
         List<Application> applications = new ArrayList<>();
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        ClientResponse<ApplicationResponse, Void> response = staticClient.retrieveApplications();
+        ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
             applications = response.successResponse.applications;
         } else if (response.exception != null) {
@@ -139,11 +176,8 @@ public class BotService {
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public static Application getCampaignFromID(String campaignID) throws Exception {
-        System.out.println("CampaignID: " + campaignID);
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        System.out.println("Client: " + staticClient);
-        ClientResponse<ApplicationResponse, Void> applicationResponse = staticClient.retrieveApplication(UUID.fromString(campaignID));
+    public Application getCampaignFromID(String campaignID) throws Exception {
+        ClientResponse<ApplicationResponse, Void> applicationResponse = fusionAuthClient.retrieveApplication(UUID.fromString(campaignID));
         if (applicationResponse.wasSuccessful()) {
             return applicationResponse.successResponse.application;
         } else if (applicationResponse.exception != null) {
@@ -170,5 +204,59 @@ public class BotService {
             }
         }
         return currentApplication;
+    }
+
+    public Mono<Pair<Boolean, String>> updateUser(String userID, String botName) {
+        return getBotIDFromBotName(botName)
+                .doOnError(e -> log.error(e.getMessage()))
+                .flatMap(new Function<String, Mono<Pair<Boolean, String>>>() {
+                    @Override
+                    public Mono<Pair<Boolean, String>> apply(String botID) {
+                        return webClient
+                                .get()
+                                .uri(new Function<UriBuilder, URI>() {
+                                    @Override
+                                    public URI apply(UriBuilder builder) {
+                                        String base = String.format("/admin/v1/userSegment/addUser/%s/%s", botID, userID);
+                                        URI uri = builder.path(base).build();
+                                        return uri;
+                                    }
+                                })
+                                .retrieve()
+                                .bodyToMono(String.class)
+                                .map(response -> {
+                                	System.out.println(response);
+                                    if (response != null) {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        try {
+                                            JsonNode root = mapper.readTree(response);
+                                            String responseCode = root.path("responseCode").asText();
+                                            if(isApiResponseOk(responseCode)) {
+	                                            Boolean status = root.path("result").path("status").asText().equalsIgnoreCase("Success");
+	                                            String userID = root.path("result").path("userID").asText();
+	                                            return Pair.of(status, userID);
+                                            }
+                                            return Pair.of(false, "");
+                                        } catch (JsonProcessingException jsonMappingException) {
+                                            return Pair.of(false, "");
+                                        }
+                                    } else {
+                                        return Pair.of(false, "");
+                                    }
+                                })
+                                .doOnError(throwable -> log.info("Error in updating user: " + throwable.getMessage()))
+                                .onErrorReturn(Pair.of(false, ""));
+                    }
+                });
+    }
+    
+    /**
+     * Check if response code sent in api response is ok
+     * 
+     * @param responseCode
+     * @return Boolean
+     */
+    private Boolean isApiResponseOk(String responseCode) {
+    	return responseCode.equals("OK");
     }
 }

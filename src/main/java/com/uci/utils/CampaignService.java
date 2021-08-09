@@ -26,6 +26,7 @@ import java.util.function.Function;
 public class CampaignService {
 
     public WebClient webClient;
+    public FusionAuthClient fusionAuthClient;
 
     /**
      * Retrieve Campaign Params From its Identifier
@@ -34,7 +35,7 @@ public class CampaignService {
      * @return Application
      */
     public Mono<JsonNode> getCampaignFromID(String campaignID) {
-        webClient.get()
+        return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/get/" + campaignID).build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -42,15 +43,14 @@ public class CampaignService {
                             if (response != null) {
                                 ObjectMapper mapper = new ObjectMapper();
                                 try {
-                                    return Mono.just(mapper.readTree(response));
+                                    return mapper.readTree(response);
                                 } catch (JsonProcessingException e) {
-                                    return Mono.empty();
+                                    return null;
                                 }
                             }
-                            return Mono.empty();
+                            return null;
                         }
-                ).doOnError(throwable -> log.error("Error in fetching Campaign Information from ID >>> " + throwable.getMessage()));
-        return Mono.empty();
+                );
     }
 
     /**
@@ -62,8 +62,7 @@ public class CampaignService {
      */
     public Application getCampaignFromName(String campaignName) throws Exception {
         List<Application> applications = new ArrayList<>();
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        ClientResponse<ApplicationResponse, Void> response = staticClient.retrieveApplications();
+        ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
             applications = response.successResponse.applications;
         } else if (response.exception != null) {
@@ -143,6 +142,28 @@ public class CampaignService {
                 ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
     }
 
+    public Mono<String> getBotNameByBotID(String botID) {
+        return webClient.get()
+                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(new Function<String, String>() {
+                         @Override
+                         public String apply(String response) {
+                             if (response != null) {
+                                 ObjectMapper mapper = new ObjectMapper();
+                                 try {
+                                     return mapper.readTree(response).get("data").get("name").asText();
+                                 } catch (JsonProcessingException e) {
+                                     return null;
+                                 }
+                             }
+                             return null;
+                         }
+                     }
+                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+    }
+
 
     /**
      * Retrieve Campaign Params From its Name
@@ -181,8 +202,7 @@ public class CampaignService {
      */
     public Application getCampaignFromNameESamwad(String campaignName) {
         List<Application> applications = new ArrayList<>();
-        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
-        ClientResponse<ApplicationResponse, Void> response = staticClient.retrieveApplications();
+        ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
             applications = response.successResponse.applications;
         } else if (response.exception != null) {
