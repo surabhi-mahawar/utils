@@ -6,8 +6,12 @@
 	</Properties>
 	<Appenders>
 		<Kafka name="KafkaLogAppender" topic="${kafka.topic}">
-			<JSONLayout />
+			<!--  <JSONLayout />  -->
+			<!--  <PatternLayout pattern="%m%n" />  -->
+			<!--  <PatternLayout pattern="%message" />  -->
 			<!--  <PatternLayout pattern="%date %message"/>  -->
+			<JSONLayout />
+			<PatternLayout pattern="%message" />
 			<Property name="bootstrap.servers">${kafka.bootstrap.servers}</Property>
 		</Kafka>
 
@@ -29,5 +33,8 @@
 			<AppenderRef ref="stderr" />
 		</Root>
 		<Logger name="org.apache.kafka" level="WARN" />
+		<Logger name="LOGGER_WITH_JSON_LAYOUT" level="INFO" additivity="false">
+			<AppendRef ref="KafkaLogAppender" />
+		</Logger>
 	</Loggers>
 </Configuration>
