@@ -32,8 +32,8 @@ import org.apache.logging.log4j.core.layout.SerializedLayout;
 import com.uci.utils.telemetry.LogTelemetryBuilder;
 import com.uci.utils.telemetry.TelemetryLogger;
 
-@Plugin(name = "myKafka", category = "Core", elementType = "appender", printObject = true)
-public final class MyKafkaAppender extends AbstractAppender {
+@Plugin(name = "customKafka", category = "Core", elementType = "appender", printObject = true)
+public final class CustomKafkaAppender extends AbstractAppender {
 
 	/**
 	 * 
@@ -45,7 +45,7 @@ public final class MyKafkaAppender extends AbstractAppender {
      * @param <B> The type to build
      */
     public static class Builder<B extends Builder<B>> extends AbstractAppender.Builder<B>
-            implements org.apache.logging.log4j.core.util.Builder<MyKafkaAppender> {
+            implements org.apache.logging.log4j.core.util.Builder<CustomKafkaAppender> {
 
         @PluginAttribute("topic")
         private String topic;
@@ -58,7 +58,7 @@ public final class MyKafkaAppender extends AbstractAppender {
 
         @SuppressWarnings("resource")
         @Override
-        public MyKafkaAppender build() {
+        public CustomKafkaAppender build() {
             final Layout<? extends Serializable> layout = getLayout();
             if (layout == null) {
                 AbstractLifeCycle.LOGGER.error("No layout provided for KafkaAppender");
@@ -66,7 +66,7 @@ public final class MyKafkaAppender extends AbstractAppender {
             }
             final KafkaManager kafkaManager = KafkaManager.getManager(getConfiguration().getLoggerContext(),
                 getName(), topic, syncSend, getPropertyArray(), key);
-            return new MyKafkaAppender(getName(), layout, getFilter(), isIgnoreExceptions(), kafkaManager,
+            return new CustomKafkaAppender(getName(), layout, getFilter(), isIgnoreExceptions(), kafkaManager,
                     getPropertyArray());
         }
 
@@ -92,7 +92,7 @@ public final class MyKafkaAppender extends AbstractAppender {
 
 	private final KafkaManager manager;
     
-    private MyKafkaAppender(final String name, final Layout<? extends Serializable> layout, final Filter filter,
+    private CustomKafkaAppender(final String name, final Layout<? extends Serializable> layout, final Filter filter,
             final boolean ignoreExceptions, final KafkaManager manager, final Property[] properties) {
         super(name, filter, layout, ignoreExceptions, properties);
         this.manager = Objects.requireNonNull(manager, "manager");
@@ -108,7 +108,7 @@ public final class MyKafkaAppender extends AbstractAppender {
     }
 
     
-    public static MyKafkaAppender createAppender(
+    public static CustomKafkaAppender createAppender(
             final Layout<? extends Serializable> layout,
             final Filter filter,
             final String name,
@@ -124,15 +124,12 @@ public final class MyKafkaAppender extends AbstractAppender {
         }
         final KafkaManager kafkaManager = KafkaManager.getManager(configuration.getLoggerContext(), name, topic,
             true, properties, key);
-        return new MyKafkaAppender(name, layout, filter, ignoreExceptions, kafkaManager, null);
+        return new CustomKafkaAppender(name, layout, filter, ignoreExceptions, kafkaManager, null);
     }
 
 	@Override
 	public void append(final LogEvent event) {
 		String className = TelemetryLogger.class.toString().replace("class ", "");
-//    	System.out.println("Custom: "+event.getLoggerName()+", class: "+LogTelemetryBuilder.class.toString().replace("class ", ""));
-//    	System.out.println(event.getLoggerName().equals(LogTelemetryBuilder.class.toString().replace("class ", "")));
-//    	LOGGER.info("Custom: "+event.getLoggerName());
 		if (event.getLoggerName().startsWith("org.apache.kafka")) {
 			LOGGER.warn("Recursive logging from [{}] for appender [{}].", event.getLoggerName(), getName());
 		} else if(event.getLoggerName().equals(className)) {
