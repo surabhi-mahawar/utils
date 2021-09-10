@@ -23,8 +23,8 @@ public class KafkaLogConfig {
 	public void createLogTopic() {
 		Properties properties = new Properties();
 //		properties.put("bootstrap.servers", BOOTSTRAP_SERVERS);
-////		properties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-////		properties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+//		properties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+//		properties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
 //		properties.put("key.deserializer", "org.springframework.kafka.support.serializer.JsonSerializer.class");
 //		properties.put("value.deserializer", "org.springframework.kafka.support.serializer.JsonSerializer.class");
 //		properties.put("group.id", "logs");
