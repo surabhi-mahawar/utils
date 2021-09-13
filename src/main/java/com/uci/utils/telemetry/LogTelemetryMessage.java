@@ -1,8 +1,14 @@
 package com.uci.utils.telemetry;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+
 import org.apache.logging.log4j.message.Message;
 import org.json.JSONObject;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.uci.utils.CampaignService;
 import com.uci.utils.telemetry.util.TelemetryEventNames;
 
 public class LogTelemetryMessage implements Message {
@@ -14,6 +20,21 @@ public class LogTelemetryMessage implements Message {
 	private String producerID = "";
 	private String userID = "";
 	private String campaign = "";
+	private String conversationId = "";
+	private String conversationOwnerId = "";
+//	private CampaignService campaignService;
+	
+	public LogTelemetryMessage(String requestBody, TelemetryEventNames eventName, String botOrg, String channel, String provider, String producerID, String userID, String conversationId, String conversationOwnerId) {
+		this.requestBody = requestBody;
+		this.eventName = eventName;
+		this.botOrg = botOrg;
+		this.channel = channel;
+		this.provider = provider;
+		this.producerID = producerID;
+		this.userID = userID;
+		this.conversationId = conversationId;
+		this.conversationOwnerId = conversationOwnerId;
+	}
 
 	public LogTelemetryMessage(String requestBody, TelemetryEventNames eventName, String botOrg, String channel, String provider, String producerID, String userID) {
 		this.requestBody = requestBody;
@@ -34,7 +55,7 @@ public class LogTelemetryMessage implements Message {
 	public String getFormattedMessage() {
 		LogTelemetryBuilder object = new LogTelemetryBuilder();
 		
-		String msgBody = object.build(requestBody, eventName, botOrg, channel, provider, producerID, userID);
+		String msgBody = object.build(requestBody, eventName, botOrg, channel, provider, producerID, userID, conversationId, conversationOwnerId);
 		JSONObject jsonBody = new JSONObject(msgBody);
 
 		return jsonBody.toString();

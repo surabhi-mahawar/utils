@@ -30,7 +30,9 @@ public class LogTelemetryBuilder {
             String channel,
             String provider,
             String producerID, 
-            String userID) {
+            String userID, 
+            String conversationId,
+            String conversationOwnerId) {
     	
     	/* Event related parameters */
     	Map oData =  getEData(eventName);
@@ -44,13 +46,13 @@ public class LogTelemetryBuilder {
         		: (provider != null && !provider.isEmpty() ? provider : null);
         
     	/* Conversation Details */
-//    	List<Map<String, Object>> cdata = campaignService.get;
-//        Map<String, Object> map1 = new HashMap<>();
-//        map1.put("ConversationOwner", conversationOwnerID);
-//        Map<String, Object> map2 = new HashMap<>();
-//        map2.put("Conversation", assessment.getBotID().toString());
-//        cdata.add(map1);
-//        cdata.add(map2);
+    	List<Map<String, Object>> cdata = new ArrayList();
+        Map<String, Object> map1 = new HashMap<>();
+        map1.put("ConversationOwner", conversationOwnerId);
+        Map<String, Object> map2 = new HashMap<>();
+        map2.put("Conversation", conversationId);
+        cdata.add(map1);
+        cdata.add(map2);
         
         Map<String, String> rollup = new HashMap<>();
         rollup.put("l1", "ConversationOwner");
@@ -65,8 +67,8 @@ public class LogTelemetryBuilder {
                         .pid(producerID).ver(LOG_TELEMETRY_IMPL_VERSION)
                         .build()
                 )
-//                .did(userID)
-//                .cdata(cdata)
+                .did(userID)
+                .cdata(cdata)
                 .rollup(rollup)
                 .build();
         
@@ -76,6 +78,11 @@ public class LogTelemetryBuilder {
         edata.put("level", "INFO");
         edata.put("pageid", pageId);
         edata.put("message", message);
+        
+        /* If actor type not user, replace used id with empty string */
+        if(!oData.get("actorType").toString().equals(ACTOR_TYPE_USER)) {
+        	userID = "";
+        }
        
         /* Telemetry Object */
         Telemetry telemetry = Telemetry.builder().
