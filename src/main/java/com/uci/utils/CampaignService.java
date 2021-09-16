@@ -99,11 +99,20 @@ public class CampaignService {
                              if (response != null) {
                                  ObjectMapper mapper = new ObjectMapper();
                                  try {
-                                     return mapper.readTree(response).get("data").get(0);
+                                     JsonNode root = mapper.readTree(response);
+                                     String responseCode = root.path("responseCode").asText();
+                                     if(isApiResponseOk(responseCode)) {
+                                         return root.path("result").path("data").get(0);
+                                     }else{
+                                         log.error("API response not okay");
+                                         return null;
+                                     }
                                  } catch (JsonProcessingException e) {
+                                     log.error("JSON Parsing error" + e.getMessage());
                                      return null;
                                  }
                              }
+                             log.error("API response was null");
                              return null;
                          }
                      }
@@ -222,6 +231,16 @@ public class CampaignService {
             }
         }
         return currentApplication;
+    }
+
+    /**
+     * Check if response code sent in api response is ok
+     *
+     * @param responseCode
+     * @return Boolean
+     */
+    private Boolean isApiResponseOk(String responseCode) {
+        return responseCode.equals("OK");
     }
 }
 
