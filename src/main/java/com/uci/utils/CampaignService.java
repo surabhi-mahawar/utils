@@ -43,13 +43,7 @@ public class CampaignService {
                             if (response != null) {
                                 ObjectMapper mapper = new ObjectMapper();
                                 try {
-                                	JsonNode root = mapper.readTree(response);
-                                    String responseCode = root.path("responseCode").asText();
-                                    if(isApiResponseOk(responseCode)) {
-                                   	 return root.path("result");
-                                    }
-                                    return null;
-//                                    return mapper.readTree(response);
+                                    return mapper.readTree(response);
                                 } catch (JsonProcessingException e) {
                                     return null;
                                 }
@@ -103,24 +97,22 @@ public class CampaignService {
                          @Override
                          public JsonNode apply(String response) {
                              if (response != null) {
-                            	 ObjectMapper mapper = new ObjectMapper();
+                                 ObjectMapper mapper = new ObjectMapper();
                                  try {
                                      JsonNode root = mapper.readTree(response);
                                      String responseCode = root.path("responseCode").asText();
                                      if(isApiResponseOk(responseCode)) {
-                                    	 return root.path("result").get("data").get(0);
+                                         return root.path("result").path("data").get(0);
+                                     }else{
+                                         log.error("API response not okay");
+                                         return null;
                                      }
-                                     return null;
-                                 } catch (JsonProcessingException jsonMappingException) {
+                                 } catch (JsonProcessingException e) {
+                                     log.error("JSON Parsing error" + e.getMessage());
                                      return null;
                                  }
-//                                 ObjectMapper mapper = new ObjectMapper();
-//                                 try {
-//                                     return mapper.readTree(response).get("data").get(0);
-//                                 } catch (JsonProcessingException e) {
-//                                      return null;
-//                                 }
                              }
+                             log.error("API response was null");
                              return null;
                          }
                      }
@@ -148,13 +140,7 @@ public class CampaignService {
                              if (response != null) {
                                  ObjectMapper mapper = new ObjectMapper();
                                  try {
-                                	 JsonNode root = mapper.readTree(response);
-                                     String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode)) {
-                                    	 return root.path("result").findValue("formID").asText();
-                                     }
-                                     return null;
-//                                	 return mapper.readTree(response).findValue("formID").asText();
+                                     return mapper.readTree(response).findValue("formID").asText();
                                  } catch (JsonProcessingException e) {
                                      return null;
                                  }
@@ -246,15 +232,15 @@ public class CampaignService {
         }
         return currentApplication;
     }
-    
+
     /**
      * Check if response code sent in api response is ok
-     * 
+     *
      * @param responseCode
      * @return Boolean
      */
     private Boolean isApiResponseOk(String responseCode) {
-    	return responseCode.equals("OK");
+        return responseCode.equals("OK");
     }
 }
 
