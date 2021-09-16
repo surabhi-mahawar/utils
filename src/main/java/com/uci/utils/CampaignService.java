@@ -121,6 +121,7 @@ public class CampaignService {
 //                                      return null;
 //                                 }
                              }
+                             log.error("API response was null");
                              return null;
                          }
                      }
