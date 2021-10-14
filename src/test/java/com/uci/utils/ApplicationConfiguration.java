@@ -52,18 +52,18 @@ public class ApplicationConfiguration{
 	}
 	
 	@Bean
-	public FusionAuthClient getFusionAuthClient() {
+	public FusionAuthClient fusionAuthClient() {
 		return new FusionAuthClient(fusionAuthKey, fusionAuthUrl);
 	}
 	
 	@Bean
     public BotService botService() {
-        return new BotService(getWebClient(), getFusionAuthClient());
+        return new BotService(getWebClient(), fusionAuthClient());
     }
 	
 	@Bean
     public CampaignService campaignService() {
-        return new CampaignService(getWebClient(), getFusionAuthClient());
+        return new CampaignService(getWebClient(), fusionAuthClient());
     }
 	
 	@Bean

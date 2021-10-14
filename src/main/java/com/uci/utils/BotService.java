@@ -63,6 +63,9 @@ public class BotService {
                             	return name.asText();
                             }
                             return "";
+//                        	 JsonNode root = mapper.readTree(response);
+//                             JsonNode name = root.path("data").path("name");
+//                             return name.asText();
                         } catch (JsonProcessingException jsonMappingException) {
                             return "";
                         }
@@ -93,6 +96,13 @@ public class BotService {
                                 }
                             }
                             return null;
+//                        	JsonNode root = mapper.readTree(response);
+//                            JsonNode name = root.path("data");
+//                            if (name.has("name") && name.get("name").asText().equals(botName)) {
+//                                return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
+//
+//                            }
+//                            return null;
                         } catch (JsonProcessingException jsonMappingException) {
                             return null;
                         }
@@ -225,7 +235,6 @@ public class BotService {
                                 .retrieve()
                                 .bodyToMono(String.class)
                                 .map(response -> {
-                                	System.out.println(response);
                                     if (response != null) {
                                         ObjectMapper mapper = new ObjectMapper();
                                         try {
