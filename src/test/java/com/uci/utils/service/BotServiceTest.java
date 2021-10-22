@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -24,12 +25,11 @@ import reactor.test.StepVerifier;
 @SpringBootTest(classes = ApplicationConfiguration.class)
 @TestPropertySource("classpath:test-application.properties")
 public class BotServiceTest {
-	private BotService botService;
-
 	@Autowired
-	private FusionAuthClient fusionAuthClient;
-
 	private MockWebServer mockWebServer;
+	
+	@Autowired
+	private BotService botService;
 
 //	private WebClient.RequestBodyUriSpec requestBodyUriMock;
 //	
@@ -95,18 +95,6 @@ public class BotServiceTest {
 //		
 //		StepVerifier.create(campaign.log()).expectNext("UCI Demo").verifyComplete();
 //	}
-
-	@BeforeEach
-	public void setupMockServer() {
-		mockWebServer = new MockWebServer();
-		try {
-			mockWebServer.start();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	    botService = new BotService(WebClient.builder().baseUrl(mockWebServer.url("/").toString())
-				.defaultHeader("admin-token", "test").build(), fusionAuthClient);
-	}
 
 	@AfterEach
 	public void tearDownServer() {

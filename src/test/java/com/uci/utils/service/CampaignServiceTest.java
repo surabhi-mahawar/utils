@@ -23,27 +23,11 @@ import reactor.test.StepVerifier;
 @SpringBootTest(classes=ApplicationConfiguration.class)
 @TestPropertySource("classpath:test-application.properties")
 public class CampaignServiceTest {
-	private CampaignService campaignService;
-	
-	@Autowired 
-	private CampaignService campaignService1;
-
 	@Autowired
-	private FusionAuthClient fusionAuthClient;
-
 	private MockWebServer mockWebServer;
 	
-	@BeforeEach
-	public void setupMockServer() {
-		mockWebServer = new MockWebServer();
-		try {
-			mockWebServer.start();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		campaignService = new CampaignService(WebClient.builder().baseUrl(mockWebServer.url("/").toString())
-				.defaultHeader("admin-token", "test").build(), fusionAuthClient);
-	}
+	@Autowired
+	private CampaignService campaignService;
 	
 	/**
 	 * Test case for get campaign id by campaign id 
