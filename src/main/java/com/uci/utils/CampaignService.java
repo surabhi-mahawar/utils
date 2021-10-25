@@ -183,7 +183,13 @@ public class CampaignService {
                              if (response != null) {
                                  ObjectMapper mapper = new ObjectMapper();
                                  try {
-                                     return mapper.readTree(response).get("data").get("name").asText();
+                                	 JsonNode root = mapper.readTree(response);
+                                     String responseCode = root.path("responseCode").asText();
+                                     if(isApiResponseOk(responseCode)) {
+                                    	 return root.path("result").get("data").get("name").asText();
+                                     }
+                                     return null;
+//                                   return mapper.readTree(response).get("data").get("name").asText();
                                  } catch (JsonProcessingException e) {
                                      return null;
                                  }
