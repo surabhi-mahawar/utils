@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.inversoft.rest.ClientResponse;
+import com.uci.utils.bot.util.BotUtil;
+
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
@@ -101,7 +103,7 @@ public class CampaignService {
                                  try {
                                      JsonNode root = mapper.readTree(response);
                                      String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode)) {
+                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                          return root.path("result").path("data").get(0);
                                      }else{
                                          log.error("API response not okay");
