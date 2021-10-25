@@ -45,7 +45,13 @@ public class CampaignService {
                             if (response != null) {
                                 ObjectMapper mapper = new ObjectMapper();
                                 try {
-                                    return mapper.readTree(response);
+                                	JsonNode root = mapper.readTree(response);
+                                    String responseCode = root.path("responseCode").asText();
+                                    if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                   	 return root.path("result");
+                                    }
+                                    return null;
+//                                    return mapper.readTree(response);
                                 } catch (JsonProcessingException e) {
                                     return null;
                                 }
@@ -142,7 +148,13 @@ public class CampaignService {
                              if (response != null) {
                                  ObjectMapper mapper = new ObjectMapper();
                                  try {
-                                     return mapper.readTree(response).findValue("formID").asText();
+                                	 JsonNode root = mapper.readTree(response);
+                                     String responseCode = root.path("responseCode").asText();
+                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                    	 return root.path("result").findValue("formID").asText();
+                                     }
+                                     return null;
+//                                     return mapper.readTree(response).findValue("formID").asText();
                                  } catch (JsonProcessingException e) {
                                      return null;
                                  }
@@ -164,7 +176,13 @@ public class CampaignService {
                              if (response != null) {
                                  ObjectMapper mapper = new ObjectMapper();
                                  try {
-                                     return mapper.readTree(response).get("data").get("name").asText();
+                                	 JsonNode root = mapper.readTree(response);
+                                     String responseCode = root.path("responseCode").asText();
+                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                    	 return root.path("result").get("data").get("name").asText();
+                                     }
+                                     return null;
+//                                     return mapper.readTree(response).get("data").get("name").asText();
                                  } catch (JsonProcessingException e) {
                                      return null;
                                  }
