@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.inversoft.rest.ClientResponse;
+import com.uci.utils.bot.util.BotUtil;
+
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
@@ -13,17 +15,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +35,8 @@ import java.util.function.Function;
 @Getter
 @Setter
 public class BotService {
-
-    public WebClient webClient;
+	
+	public WebClient webClient;
     public FusionAuthClient fusionAuthClient;
 
     /**
@@ -54,11 +52,12 @@ public class BotService {
                 .bodyToMono(String.class)
                 .map(response -> {
                     if (response != null) {
+                    	log.info(response);
                         ObjectMapper mapper = new ObjectMapper();
                         try {
                             JsonNode root = mapper.readTree(response);
                             String responseCode = root.path("responseCode").asText();
-                            if(isApiResponseOk(responseCode)) {
+                            if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                             	JsonNode name = root.path("result").path("data").path("name");
                             	return name.asText();
                             }
@@ -124,7 +123,7 @@ public class BotService {
                             try {
                                 JsonNode root = mapper.readTree(response);
                                 String responseCode = root.path("responseCode").asText();
-                                if(isApiResponseOk(responseCode)) {
+                                if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                 	JsonNode name = root.path("result").path("data");
 	                                if (name.has("name") && name.get("name").asText().equals(botName)) {
 	                                    return ((JsonNode) ((JsonNode) name.path("id"))).asText();
