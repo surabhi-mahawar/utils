@@ -11,7 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class BotUtil {
-	public static String botLiveStatus = "Live";
+	public static String botEnabledStatus = "enabled";
+	public static String botLiveStatus = "live";
 
 	public static Boolean checkBotValidFromJsonNode(JsonNode root) {
 		JsonNode data = root.path("result").path("data");
@@ -26,8 +27,8 @@ public class BotUtil {
 	}
 	
 	public static Boolean checkBotValid(String status, String startDate) {
-		System.out.println("status r:"+checkBotLiveStatus(status));
-		System.out.println("date r:"+checkBotStartDateValid(startDate));
+//		System.out.println("status result:"+checkBotLiveStatus(status));
+//		System.out.println("date result:"+checkBotStartDateValid(startDate));
 		
 		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate)) {
 			return true;
@@ -36,7 +37,8 @@ public class BotUtil {
 	}
 	
 	public static Boolean checkBotLiveStatus(String status) {
-		if(status.equals(botLiveStatus)) {
+		status = status.toLowerCase();
+		if(status.equals(botLiveStatus) || status.equals(botEnabledStatus)) {
 			return true;
 		}
 		return false;
@@ -44,6 +46,11 @@ public class BotUtil {
 	
 	public static Boolean checkBotStartDateValid(String startDate) {
 		try {
+			/* Start Date  */
+			if(startDate == null) {
+				return true;
+			}
+			
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         	
         	/* local date time */
