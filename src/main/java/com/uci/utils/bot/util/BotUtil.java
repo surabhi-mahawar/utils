@@ -23,6 +23,7 @@ public class BotUtil {
     	log.info("Bot Status: "+status);
     	log.info("Bot Start Date: "+startDate);
     	
+    	
     	return checkBotValid(status, startDate);
 	}
 	
@@ -47,7 +48,7 @@ public class BotUtil {
 	public static Boolean checkBotStartDateValid(String startDate) {
 		try {
 			/* Start Date  */
-			if(startDate == null) {
+			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
 				return true;
 			}
 			
