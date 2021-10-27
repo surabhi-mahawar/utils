@@ -20,8 +20,8 @@ public class BotUtil {
     	String status = data.findValue("status").asText();
     	String startDate = data.findValue("startDate").asText();
 		
-    	log.info("Bot Status: "+status);
-    	log.info("Bot Start Date: "+startDate);
+    	log.info("V2 Bot Status: "+status);
+    	log.info("V2 Bot Start Date: "+startDate);
     	
     	
     	return checkBotValid(status, startDate);
@@ -48,6 +48,7 @@ public class BotUtil {
 	public static Boolean checkBotStartDateValid(String startDate) {
 		try {
 			/* Start Date  */
+			log.info("check: "+(startDate == null || startDate == "null" || startDate.isEmpty()));
 			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
 				return true;
 			}
