@@ -20,7 +20,9 @@ public class BotUtil {
     	String status = data.findValue("status").asText();
     	String startDate = data.findValue("startDate").asText();
     	
-    	return checkBotValid(status, startDate);
+    	Boolean result = checkBotValid(status, startDate);
+    	log.info("Bot check result: "+result);
+    	return result;
 	}
 	
 	public static Boolean checkBotValid(String status, String startDate) {
