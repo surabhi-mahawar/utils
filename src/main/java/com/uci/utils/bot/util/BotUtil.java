@@ -19,18 +19,11 @@ public class BotUtil {
     	
     	String status = data.findValue("status").asText();
     	String startDate = data.findValue("startDate").asText();
-		
-    	log.info("V2 Bot Status: "+status);
-    	log.info("V2 Bot Start Date: "+startDate);
-    	
     	
     	return checkBotValid(status, startDate);
 	}
 	
 	public static Boolean checkBotValid(String status, String startDate) {
-//		System.out.println("status result:"+checkBotLiveStatus(status));
-//		System.out.println("date result:"+checkBotStartDateValid(startDate));
-		
 		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate)) {
 			return true;
 		}
@@ -41,6 +34,8 @@ public class BotUtil {
 		status = status.toLowerCase();
 		if(status.equals(botLiveStatus) || status.equals(botEnabledStatus)) {
 			return true;
+		} else {
+			log.error("Bot is not enabled, Please enable it.");
 		}
 		return false;
 	}
@@ -48,7 +43,6 @@ public class BotUtil {
 	public static Boolean checkBotStartDateValid(String startDate) {
 		try {
 			/* Start Date  */
-			log.info("check: "+(startDate == null || startDate == "null" || startDate.isEmpty()));
 			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
 				return true;
 			}
@@ -63,16 +57,13 @@ public class BotUtil {
         	/* bot start date in local date time format */
         	LocalDateTime localStartDate = LocalDateTime.parse(startDate, fmt);
             
-        	System.out.println(localDateTime);
-        	System.out.println(localStartDate);
-        	System.out.println(localDateTime.compareTo(localStartDate));
-        	
         	if(localDateTime.compareTo(localStartDate) >= 0) {
         		return true;
         	}
 		} catch (Exception e) {
 			log.error("Error in checkBotStartDateValid: "+e.getMessage());
 		}
+		log.error("Bot starting date is not valid.");
 		return false;
 	}
 }
