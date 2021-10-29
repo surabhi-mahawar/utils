@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
+import com.uci.utils.common.CommonUtil;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
@@ -49,7 +50,7 @@ public class CampaignService {
                                 try {
                                 	JsonNode root = mapper.readTree(response);
                                     String responseCode = root.path("responseCode").asText();
-                                    if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                    if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                    	 return root.path("result");
                                     }
                                     return null;
@@ -61,9 +62,8 @@ public class CampaignService {
                             return null;
                         }
                 )
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
-                .doOnError(TimeoutException.class, ex -> log.info("Timeout error in getting campaign."))
-                .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting campaign: " + throwable.getMessage()))
                 .onErrorReturn(null);
     }
 
@@ -115,7 +115,7 @@ public class CampaignService {
                                  try {
                                      JsonNode root = mapper.readTree(response);
                                      String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                     if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                          return root.path("result").path("data").get(0);
                                      }else{
                                          log.error("API response not okay");
@@ -131,7 +131,7 @@ public class CampaignService {
                          }
                      }
                 )
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
                 .doOnError(throwable -> {
                     log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
                 }).onErrorReturn(null);
@@ -158,7 +158,7 @@ public class CampaignService {
                                  try {
                                 	 JsonNode root = mapper.readTree(response);
                                      String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                     if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                     	 return root.path("result").findValue("formID").asText();
                                      }
                                      return null;
@@ -171,7 +171,7 @@ public class CampaignService {
                          }
                      }
                 )
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
                 .onErrorReturn(null).doOnError(throwable -> log.error("Error in getting first form by bot id >>> " + throwable.getMessage()));
     }
 
@@ -188,7 +188,7 @@ public class CampaignService {
                                  try {
                                 	 JsonNode root = mapper.readTree(response);
                                      String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                     if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                     	 return root.path("result").get("data").get("name").asText();
                                      }
                                      return null;
@@ -201,7 +201,7 @@ public class CampaignService {
                          }
                      }
                 )
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
                 .onErrorReturn(null).doOnError(throwable -> log.error("Error in getting bot name from bot id >>> " + throwable.getMessage()));
     }
 
@@ -263,31 +263,6 @@ public class CampaignService {
             }
         }
         return currentApplication;
-    }
-
-    /**
-     * Check if response code sent in api response is ok
-     *
-     * @param responseCode
-     * @return Boolean
-     */
-    private Boolean isApiResponseOk(String responseCode) {
-        return responseCode.equals("OK");
-    }
-    
-    /**
-     * Get Timeout in seconds from env variables, default value 5 
-     * @return
-     */
-    private Long getTimeoutSeconds() {
-    	Long timeout = null;
-    	try {
-    		timeout = Long.parseLong(System.getenv("WEBCLIENT_HTTP_REQUEST_TIMEOUT"));
-    	} catch (Exception e) {
-    		log.error("Exception in conversion of webclient http request timeout.");
-    	}
-    	
-    	return timeout != null ? timeout : 5;
-    }    
+    } 
 }
 

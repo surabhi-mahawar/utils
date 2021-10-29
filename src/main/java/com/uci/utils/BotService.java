@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
+import com.uci.utils.common.CommonUtil;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
@@ -63,7 +64,7 @@ public class BotService {
                         try {
                             JsonNode root = mapper.readTree(response);
                             String responseCode = root.path("responseCode").asText();
-                            if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                            if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                             	JsonNode name = root.path("result").path("data").path("name");
                             	return name.asText();
                             }
@@ -76,8 +77,8 @@ public class BotService {
                         return "";
                     }
                 })
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
-                .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting campaign: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
 
@@ -92,7 +93,7 @@ public class BotService {
                         try {
                             JsonNode root = mapper.readTree(response);
                             String responseCode = root.path("responseCode").asText();
-                            if(isApiResponseOk(responseCode)) {
+                            if(CommonUtil.isWebClientApiResponseOk(responseCode)) {
                             	JsonNode name = root.path("result").path("data");
                                 if (name.has("name") && name.get("name").asText().equals(botName)) {
                                     return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
@@ -107,8 +108,8 @@ public class BotService {
                     }
                     return null;
                 })
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
-                .doOnError(throwable -> log.info("Error in getting adpater: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting adpater: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
 
@@ -131,7 +132,7 @@ public class BotService {
                             try {
                                 JsonNode root = mapper.readTree(response);
                                 String responseCode = root.path("responseCode").asText();
-                                if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                 	JsonNode name = root.path("result").path("data");
 	                                if (name.has("name") && name.get("name").asText().equals(botName)) {
 	                                    return ((JsonNode) ((JsonNode) name.path("id"))).asText();
@@ -148,8 +149,8 @@ public class BotService {
                         return null;
                     }
                 })
-                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
-                .doOnError(throwable -> log.info("Error in getting bot id from bot name: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting bot id from bot name: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
     
@@ -239,7 +240,7 @@ public class BotService {
                                         try {
                                             JsonNode root = mapper.readTree(response);
                                             String responseCode = root.path("responseCode").asText();
-                                            if(isApiResponseOk(responseCode)) {
+                                            if(CommonUtil.isWebClientApiResponseOk(responseCode)) {
 	                                            Boolean status = root.path("result").path("status").asText().equalsIgnoreCase("Success");
 	                                            String userID = root.path("result").path("userID").asText();
 	                                            return Pair.of(status, userID);
@@ -252,35 +253,10 @@ public class BotService {
                                         return Pair.of(false, "");
                                     }
                                 })
-                                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
-                                .doOnError(throwable -> log.info("Error in updating user: " + throwable.getMessage()))
+                                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                                .doOnError(throwable -> log.error("Error in updating user: " + throwable.getMessage()))
                                 .onErrorReturn(Pair.of(false, ""));
                     }
                 });
-    }
-    
-    /**
-     * Check if response code sent in api response is ok
-     * 
-     * @param responseCode
-     * @return Boolean
-     */
-    private Boolean isApiResponseOk(String responseCode) {
-    	return responseCode.equals("OK");
-    }
-    
-    /**
-     * Get Timeout in seconds from env variables, default value 5 
-     * @return
-     */
-    private Long getTimeoutSeconds() {
-    	Long timeout = null;
-    	try {
-    		timeout = Long.parseLong(System.getenv("WEBCLIENT_HTTP_REQUEST_TIMEOUT"));
-    	} catch (Exception e) {
-    		log.error("Exception in conversion of webclient http request timeout.");
-    	}
-    	
-    	return timeout != null ? timeout : 20;
     }
 }
