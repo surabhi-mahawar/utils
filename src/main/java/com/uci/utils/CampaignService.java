@@ -17,8 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 @SuppressWarnings("ReactiveStreamsUnusedPublisher")
@@ -58,7 +60,11 @@ public class CampaignService {
                             }
                             return null;
                         }
-                );
+                )
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .doOnError(TimeoutException.class, ex -> log.info("Timeout error in getting campaign."))
+                .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                .onErrorReturn(null);
     }
 
     /**
@@ -124,7 +130,9 @@ public class CampaignService {
                              return null;
                          }
                      }
-                ).doOnError(throwable -> {
+                )
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .doOnError(throwable -> {
                     log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
                 }).onErrorReturn(null);
 
@@ -162,7 +170,9 @@ public class CampaignService {
                              return null;
                          }
                      }
-                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+                )
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .onErrorReturn(null).doOnError(throwable -> log.error("Error in getting first form by bot id >>> " + throwable.getMessage()));
     }
 
     public Mono<String> getBotNameByBotID(String botID) {
@@ -190,7 +200,9 @@ public class CampaignService {
                              return null;
                          }
                      }
-                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+                )
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .onErrorReturn(null).doOnError(throwable -> log.error("Error in getting bot name from bot id >>> " + throwable.getMessage()));
     }
 
 
@@ -262,5 +274,20 @@ public class CampaignService {
     private Boolean isApiResponseOk(String responseCode) {
         return responseCode.equals("OK");
     }
+    
+    /**
+     * Get Timeout in seconds from env variables, default value 5 
+     * @return
+     */
+    private Long getTimeoutSeconds() {
+    	Long timeout = null;
+    	try {
+    		timeout = Long.parseLong(System.getenv("WEBCLIENT_HTTP_REQUEST_TIMEOUT"));
+    	} catch (Exception e) {
+    		log.error("Exception in conversion of webclient http request timeout.");
+    	}
+    	
+    	return timeout != null ? timeout : 5;
+    }    
 }
 

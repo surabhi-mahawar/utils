@@ -10,22 +10,28 @@ import com.uci.utils.bot.util.BotUtil;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
+import io.netty.handler.timeout.ReadTimeoutException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClientRequest;
 
 import java.net.URI;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 @SuppressWarnings("ALL")
@@ -70,6 +76,7 @@ public class BotService {
                         return "";
                     }
                 })
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
                 .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
@@ -100,6 +107,7 @@ public class BotService {
                     }
                     return null;
                 })
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
                 .doOnError(throwable -> log.info("Error in getting adpater: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
@@ -140,7 +148,8 @@ public class BotService {
                         return null;
                     }
                 })
-                .doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
+                .doOnError(throwable -> log.info("Error in getting bot id from bot name: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
     
@@ -243,6 +252,7 @@ public class BotService {
                                         return Pair.of(false, "");
                                     }
                                 })
+                                .timeout(Duration.ofSeconds(getTimeoutSeconds()))
                                 .doOnError(throwable -> log.info("Error in updating user: " + throwable.getMessage()))
                                 .onErrorReturn(Pair.of(false, ""));
                     }
@@ -257,5 +267,20 @@ public class BotService {
      */
     private Boolean isApiResponseOk(String responseCode) {
     	return responseCode.equals("OK");
+    }
+    
+    /**
+     * Get Timeout in seconds from env variables, default value 5 
+     * @return
+     */
+    private Long getTimeoutSeconds() {
+    	Long timeout = null;
+    	try {
+    		timeout = Long.parseLong(System.getenv("WEBCLIENT_HTTP_REQUEST_TIMEOUT"));
+    	} catch (Exception e) {
+    		log.error("Exception in conversion of webclient http request timeout.");
+    	}
+    	
+    	return timeout != null ? timeout : 20;
     }
 }
