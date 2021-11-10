@@ -23,6 +23,7 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -142,6 +143,45 @@ public class BotService {
                 })
                 .doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
                 .onErrorReturn("");
+    }
+    
+
+    
+    /**
+     * Retrieve Campaign Params From its Identifier
+     *
+     * @param campaignID - Campaign Identifier
+     * @return Application
+     */
+    public Mono<Map<String, String>> getGupshupAdpaterCredentials(String adapterID) {
+        return webClient.get()
+                .uri(builder -> builder.path("admin/v1/adapter/getCredentials/" + adapterID).build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                            if (response != null) {
+                                ObjectMapper mapper = new ObjectMapper();
+                                try {
+                                	Map<String, String> credentials = new HashMap<String, String>();
+                                	JsonNode root = mapper.readTree(response);
+                                    String responseCode = root.path("responseCode").asText();
+                                    if(isApiResponseOk(responseCode)) {
+                                    	JsonNode result = root.path("result");
+                                    	credentials.put("username2Way", result.findValue("username2Way").asText());
+                                    	credentials.put("password2Way", result.findValue("password2Way").asText());
+                                    	credentials.put("usernameHSM", result.findValue("usernameHSM").asText());
+                                    	credentials.put("passwordHSM", result.findValue("passwordHSM").asText());
+                                    	System.out.println(credentials);
+                                    	return credentials;
+                                    }
+                                    return null;
+                                } catch (JsonProcessingException e) {
+                                    return null;
+                                }
+                            }
+                            return null;
+                        }
+                );
     }
     
 
