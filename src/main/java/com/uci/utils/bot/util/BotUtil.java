@@ -17,20 +17,29 @@ public class BotUtil {
 	public static Boolean checkBotValidFromJsonNode(JsonNode root) {
 		JsonNode data = root.path("result").path("data");
     	
-    	String status = data.findValue("status").asText();
-    	String startDate = data.findValue("startDate").asText();
-		
-    	log.info("V2 Bot Status: "+status);
-    	log.info("V2 Bot Start Date: "+startDate);
-    	
-    	
-    	return checkBotValid(status, startDate);
+		if(data.findValue("status") != null && data.findValue("startDate") != null) {
+			String status = data.findValue("status").asText();
+	    	String startDate = data.findValue("startDate").asText();
+			
+	    	log.info("Bot Status Value: "+status);
+	    	log.info("Bot Start Date Value: "+startDate);
+	    	
+	    	
+	    	return checkBotValid(status, startDate);
+		} else {
+			log.info("Bot Status Value: "+data.findValue("status"));
+	    	log.info("Bot Start Date Value: "+data.findValue("startDate"));
+
+			return false;
+		}
 	}
 	
 	public static Boolean checkBotValid(String status, String startDate) {
 //		System.out.println("status result:"+checkBotLiveStatus(status));
 //		System.out.println("date result:"+checkBotStartDateValid(startDate));
 		
+		log.info("Bot Status Check: "+checkBotLiveStatus(status));
+		log.info("Bot Start Date Check: "+checkBotStartDateValid(startDate));
 		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate)) {
 			return true;
 		}
@@ -48,7 +57,7 @@ public class BotUtil {
 	public static Boolean checkBotStartDateValid(String startDate) {
 		try {
 			/* Start Date  */
-			log.info("check: "+(startDate == null || startDate == "null" || startDate.isEmpty()));
+			log.info("Bot Start Date Empty Check: "+(startDate == null || startDate == "null" || startDate.isEmpty()));
 			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
 				return true;
 			}
@@ -63,9 +72,9 @@ public class BotUtil {
         	/* bot start date in local date time format */
         	LocalDateTime localStartDate = LocalDateTime.parse(startDate, fmt);
             
-        	System.out.println(localDateTime);
-        	System.out.println(localStartDate);
-        	System.out.println(localDateTime.compareTo(localStartDate));
+//        	System.out.println(localDateTime);
+//        	System.out.println(localStartDate);
+//        	System.out.println(localDateTime.compareTo(localStartDate));
         	
         	if(localDateTime.compareTo(localStartDate) >= 0) {
         		return true;
