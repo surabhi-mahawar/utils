@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
 
@@ -15,10 +17,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
+import reactor.cache.CacheMono;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
+
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 @SuppressWarnings("ReactiveStreamsUnusedPublisher")
@@ -29,6 +36,11 @@ public class CampaignService {
 
     public WebClient webClient;
     public FusionAuthClient fusionAuthClient;
+	private Cache<Object, Object> cache;
+    
+//    private static final Cache<Object, Object> cache = Caffeine.newBuilder().maximumSize(1000)
+//			.expireAfterWrite(Duration.ofSeconds(300))
+//			.removalListener((key, value, cause) -> log.info("Remove cache({}) ... {}", key, cause)).build();
 
     /**
      * Retrieve Campaign Params From its Identifier
@@ -37,28 +49,34 @@ public class CampaignService {
      * @return Application
      */
     public Mono<JsonNode> getCampaignFromID(String campaignID) {
-        return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/" + campaignID).build())
-                .retrieve()
-                .bodyToMono(String.class)
-                .map(response -> {
-                            if (response != null) {
-                                ObjectMapper mapper = new ObjectMapper();
-                                try {
-                                	JsonNode root = mapper.readTree(response);
-                                    String responseCode = root.path("responseCode").asText();
-                                    if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
-                                   	 return root.path("result");
-                                    }
-                                    return null;
-//                                    return mapper.readTree(response);
-                                } catch (JsonProcessingException e) {
-                                    return null;
-                                }
-                            }
-                            return null;
-                        }
-                );
+    	String cacheKey = "campaign-node-by-id:" + campaignID;
+		return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
+					.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get()
+		                .uri(builder -> builder.path("admin/v1/bot/get/" + campaignID).build())
+		                .retrieve()
+		                .bodyToMono(String.class)
+		                .map(response -> {
+		                            if (response != null) {
+		                                ObjectMapper mapper = new ObjectMapper();
+		                                try {
+		                                	JsonNode root = mapper.readTree(response);
+		                                    String responseCode = root.path("responseCode").asText();
+		                                    if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                   	 return root.path("result");
+		                                    }
+		                                    return null;
+		//                                    return mapper.readTree(response);
+		                                } catch (JsonProcessingException e) {
+		                                    return null;
+		                                }
+		                            }
+		                            return null;
+		                        }
+		                ))
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
     }
 
     /**
@@ -97,38 +115,42 @@ public class CampaignService {
      * @return Application
      */
     public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
-        return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
-                .retrieve()
-                .bodyToMono(String.class)
-                .map(new Function<String, JsonNode>() {
-                         @Override
-                         public JsonNode apply(String response) {
-                             if (response != null) {
-                                 ObjectMapper mapper = new ObjectMapper();
-                                 try {
-                                     JsonNode root = mapper.readTree(response);
-                                     String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
-                                         return root.path("result").path("data").get(0);
-                                     }else{
-                                         log.error("API response not okay");
-                                         return null;
-                                     }
-                                 } catch (JsonProcessingException e) {
-                                     log.error("JSON Parsing error" + e.getMessage());
-                                     return null;
-                                 }
-                             }
-                             log.error("API response was null");
-                             return null;
-                         }
-                     }
-                ).doOnError(throwable -> {
-                    log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
-                }).onErrorReturn(null);
-
-
+    	String cacheKey = "campaign-node-by-name:" + campaignName;
+		return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
+					.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get()
+		                .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
+		                .retrieve()
+		                .bodyToMono(String.class)
+		                .map(new Function<String, JsonNode>() {
+		                         @Override
+		                         public JsonNode apply(String response) {
+		                             if (response != null) {
+		                                 ObjectMapper mapper = new ObjectMapper();
+		                                 try {
+		                                     JsonNode root = mapper.readTree(response);
+		                                     String responseCode = root.path("responseCode").asText();
+		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                         return root.path("result").path("data").get(0);
+		                                     }else{
+		                                         log.error("API response not okay");
+		                                         return null;
+		                                     }
+		                                 } catch (JsonProcessingException e) {
+		                                     log.error("JSON Parsing error" + e.getMessage());
+		                                     return null;
+		                                 }
+		                             }
+		                             log.error("API response was null");
+		                             return null;
+		                         }
+		                     }
+		                ).doOnError(throwable -> {
+		                    log.error("Error in fetching Campaign Information from Name when invoked by transformer >>> " + throwable.getMessage());
+		                }).onErrorReturn(null))
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
     }
 
     /**
@@ -138,59 +160,74 @@ public class CampaignService {
      * @return FormID for the first transformer.
      */
     public Mono<String> getFirstFormByBotID(String botID) {
-        return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
-                .retrieve()
-                .bodyToMono(String.class)
-                .map(new Function<String, String>() {
-                         @Override
-                         public String apply(String response) {
-                             if (response != null) {
-                                 ObjectMapper mapper = new ObjectMapper();
-                                 try {
-                                	 JsonNode root = mapper.readTree(response);
-                                     String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
-                                    	 return root.path("result").findValue("formID").asText();
-                                     }
-                                     return null;
-//                                     return mapper.readTree(response).findValue("formID").asText();
-                                 } catch (JsonProcessingException e) {
-                                     return null;
-                                 }
-                             }
-                             return null;
-                         }
-                     }
-                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+    	String cacheKey = "form-by-bot-name:" + botID;
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(cacheKey).toString() : null)
+					.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get()
+		                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
+		                .retrieve()
+		                .bodyToMono(String.class)
+		                .map(new Function<String, String>() {
+		                         @Override
+		                         public String apply(String response) {
+		                             if (response != null) {
+		                                 ObjectMapper mapper = new ObjectMapper();
+		                                 try {
+		                                	 JsonNode root = mapper.readTree(response);
+		                                     String responseCode = root.path("responseCode").asText();
+		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                    	 return root.path("result").findValue("formID").asText();
+		                                     }
+		                                     return null;
+		                                 } catch (JsonProcessingException e) {
+		                                     return null;
+		                                 }
+		                             }
+		                             return null;
+		                         }
+		                     }
+		                )
+		                .onErrorReturn(null)
+		                .doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage())))
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
+		                
     }
 
     public Mono<String> getBotNameByBotID(String botID) {
-        return webClient.get()
-                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
-                .retrieve()
-                .bodyToMono(String.class)
-                .map(new Function<String, String>() {
-                         @Override
-                         public String apply(String response) {
-                             if (response != null) {
-                                 ObjectMapper mapper = new ObjectMapper();
-                                 try {
-                                	 JsonNode root = mapper.readTree(response);
-                                     String responseCode = root.path("responseCode").asText();
-                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
-                                    	 return root.path("result").get("data").get("name").asText();
-                                     }
-                                     return null;
-//                                     return mapper.readTree(response).get("data").get("name").asText();
-                                 } catch (JsonProcessingException e) {
-                                     return null;
-                                 }
-                             }
-                             return null;
-                         }
-                     }
-                ).onErrorReturn(null).doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()));
+    	String cacheKey = "bot-name-by-id:" + botID;
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(cacheKey).toString() : null)
+					.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get()
+		                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
+		                .retrieve()
+		                .bodyToMono(String.class)
+		                .map(new Function<String, String>() {
+		                         @Override
+		                         public String apply(String response) {
+		                             if (response != null) {
+		                                 ObjectMapper mapper = new ObjectMapper();
+		                                 try {
+		                                	 JsonNode root = mapper.readTree(response);
+		                                     String responseCode = root.path("responseCode").asText();
+		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                    	 return root.path("result").get("data").get("name").asText();
+		                                     }
+		                                     return null;
+		                                 } catch (JsonProcessingException e) {
+		                                     return null;
+		                                 }
+		                             }
+		                             return null;
+		                         }
+		                     }
+		                )
+		                .onErrorReturn(null)
+		                .doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage())))
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
     }
 
 
