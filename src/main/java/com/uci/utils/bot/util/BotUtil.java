@@ -67,9 +67,7 @@ public class BotUtil {
 	}
 	
 	public static Boolean checkBotValid(String status, String startDate, String endDate) {
-		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate) 
-				&& checkBotEndDateValid(endDate)
-				&& !(startDate == null || startDate == "null" || startDate.isEmpty())) {
+		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate)) {
 			return true;
 		}
 		return false;
@@ -88,10 +86,10 @@ public class BotUtil {
 		try {
 			/* Start Date  */
 //			log.info("Start Date empty check: "+(startDate == null || startDate == "null" || startDate.isEmpty()));
-//			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
-//				log.info("Bot start date is empty.");
-//				return true;
-//			}
+			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
+				log.info("Bot start date is empty.");
+				return true;
+			}
 			
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         	
