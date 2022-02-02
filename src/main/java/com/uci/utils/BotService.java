@@ -72,6 +72,45 @@ public class BotService {
 //	}
 	
 	/**
+	 * Retrieve Bot Node from Starting Message 
+	 * @param startingMessage
+	 * @return
+	 */
+	public Mono<JsonNode> getBotFromStartingMessage(String startingMessage) {
+		String cacheKey = "bot-for-starting-message:" + startingMessage;
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+					.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get()
+						.uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
+						.retrieve().bodyToMono(String.class).map(response -> {
+							if (response != null) {
+								log.info(response);
+								try {
+									ObjectMapper mapper = new ObjectMapper();
+									JsonNode root = mapper.readTree(response);
+									String responseCode = root.path("responseCode").asText();
+									if (isApiResponseOk(responseCode)) {
+										return root;
+									}
+									return new ObjectMapper().createObjectNode();
+								} catch (JsonProcessingException jsonMappingException) {
+									return new ObjectMapper().createObjectNode();
+								}
+
+							} else {
+								return new ObjectMapper().createObjectNode();
+							}
+						})
+						.doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+						.onErrorReturn(new ObjectMapper().createObjectNode())
+						)
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
+	}
+
+	
+	/**
 	 * Retrieve Campaign Params From its Name
 	 *
 	 * @param startingMessage - Starting Message

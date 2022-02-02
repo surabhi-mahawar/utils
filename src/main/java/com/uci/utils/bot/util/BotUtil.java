@@ -1,8 +1,12 @@
 package com.uci.utils.bot.util;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
+import org.springframework.format.datetime.DateFormatter;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,6 +18,42 @@ public class BotUtil {
 	public static String botEnabledStatus = "enabled";
 	public static String botLiveStatus = "live";
 
+	public static String getBotValidFromJsonNode(JsonNode root) {
+		JsonNode data = root.path("result").path("data");
+    	
+    	String status = data.findValue("status").asText();
+    	String startDate = data.findValue("startDate").asText();
+    	String endDate = data.findValue("endDate").asText();
+		
+    	log.info("Bot Status: "+status+", Start Date: "+startDate+", End Date: "+endDate);
+    	
+    	return getBotValid(status, startDate, endDate);
+	}
+	
+	public static String getBotValid(String status, String startDate, String endDate) {
+		if(!checkBotLiveStatus(status)) {
+			return String.format("This conversation is not active yet. Please try again then.");
+		} else if(startDate == null || startDate == "null" || startDate.isEmpty()) {
+			log.info("Bot start date is empty.");
+			return String.format("This conversation is not active yet. Please try again then.");
+		} else if(!checkBotStartDateValid(startDate)) {
+			if(!startDate.isEmpty()) {
+				SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd");
+				try {
+					Date date=fmt.parse(startDate);
+					startDate = fmt.format(date).toString();
+				} catch (ParseException e) {
+					log.info("Date cannot be formatted");
+				}
+				return String.format("This conversation is not active yet. It will be enabled on %s. Please try again then.", startDate);
+			}
+			return String.format("This conversation is not active yet. Please try again then.");
+		} else if(!checkBotEndDateValid(endDate)) {
+			return String.format("This conversation has expired now. Please contact your state admin to seek help with this.");
+		}
+		return "true";
+	}
+	
 	public static Boolean checkBotValidFromJsonNode(JsonNode root) {
 		JsonNode data = root.path("result").path("data");
     	
@@ -27,8 +67,9 @@ public class BotUtil {
 	}
 	
 	public static Boolean checkBotValid(String status, String startDate, String endDate) {
-		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate) && checkBotEndDateValid(endDate)) {
-			log.info("Bot is valid.");
+		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate) 
+				&& checkBotEndDateValid(endDate)
+				&& !(startDate == null || startDate == "null" || startDate.isEmpty())) {
 			return true;
 		}
 		return false;
@@ -47,10 +88,10 @@ public class BotUtil {
 		try {
 			/* Start Date  */
 //			log.info("Start Date empty check: "+(startDate == null || startDate == "null" || startDate.isEmpty()));
-			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
-				log.info("Bot start date is empty.");
-				return true;
-			}
+//			if(startDate == null || startDate == "null" || startDate.isEmpty()) {
+//				log.info("Bot start date is empty.");
+//				return true;
+//			}
 			
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         	
