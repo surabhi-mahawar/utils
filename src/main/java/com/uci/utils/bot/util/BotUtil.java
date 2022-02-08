@@ -30,10 +30,10 @@ public class BotUtil {
 	
 	public static String getBotValid(String status, String startDate, String endDate) {
 		if(!checkBotLiveStatus(status)) {
-			return String.format("This conversation is not active yet. Please try again then.");
+			return String.format("This conversation is not active yet. Please contact your state admin to seek help with this.");
 		} else if(startDate == null || startDate == "null" || startDate.isEmpty()) {
 			log.info("Bot start date is empty.");
-			return String.format("This conversation is not active yet. Please try again then.");
+			return String.format("This conversation is not active yet. Please contact your state admin to seek help with this..");
 		} else if(!checkBotStartDateValid(startDate)) {
 			if(!startDate.isEmpty()) {
 				SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd");
