@@ -39,7 +39,8 @@ public class BotUtil {
 				SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd");
 				try {
 					Date date=fmt.parse(startDate);
-					startDate = fmt.format(date).toString();
+					SimpleDateFormat fmt2 = new SimpleDateFormat("dd/MM/yy");
+					startDate = fmt2.format(date).toString();
 				} catch (ParseException e) {
 					log.info("Date cannot be formatted");
 				}
