@@ -62,7 +62,7 @@ public class CampaignService {
 		                                try {
 		                                	JsonNode root = mapper.readTree(response);
 		                                    String responseCode = root.path("responseCode").asText();
-		                                    if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                    if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root.path("result").path("data"))) {
 		                                   	 return root.path("result");
 		                                    }
 		                                    return null;
@@ -130,9 +130,10 @@ public class CampaignService {
 		                                 try {
 		                                     JsonNode root = mapper.readTree(response);
 		                                     String responseCode = root.path("responseCode").asText();
-		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                     if(isApiResponseOk(responseCode) && root.path("result").path("data").get(0) != null 
+		                                    		 && BotUtil.checkBotValidFromJsonNode(root.path("result").path("data").get(0))) {
 		                                         return root.path("result").path("data").get(0);
-		                                     }else{
+		                                     } else {
 		                                         log.error("API response not okay");
 		                                         return null;
 		                                     }
@@ -175,7 +176,7 @@ public class CampaignService {
 		                                 try {
 		                                	 JsonNode root = mapper.readTree(response);
 		                                     String responseCode = root.path("responseCode").asText();
-		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root.path("result").path("data"))) {
 		                                    	 return root.path("result").findValue("formID").asText();
 		                                     }
 		                                     return null;
@@ -211,7 +212,7 @@ public class CampaignService {
 		                                 try {
 		                                	 JsonNode root = mapper.readTree(response);
 		                                     String responseCode = root.path("responseCode").asText();
-		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+		                                     if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root.path("result").path("data"))) {
 		                                    	 return root.path("result").get("data").get("name").asText();
 		                                     }
 		                                     return null;

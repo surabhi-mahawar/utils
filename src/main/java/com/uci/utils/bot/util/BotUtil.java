@@ -18,10 +18,8 @@ public class BotUtil {
 	public static String botEnabledStatus = "enabled";
 	public static String botLiveStatus = "live";
 
-	public static String getBotValidFromJsonNode(JsonNode root) {
-		JsonNode data = root.path("result").path("data");
-    	
-    	String status = data.findValue("status").asText();
+	public static String getBotValidFromJsonNode(JsonNode data) {
+		String status = data.findValue("status").asText();
     	String startDate = data.findValue("startDate").asText();
     	String endDate = data.findValue("endDate").asText();
 		
@@ -54,10 +52,8 @@ public class BotUtil {
 		return "true";
 	}
 	
-	public static Boolean checkBotValidFromJsonNode(JsonNode root) {
-		JsonNode data = root.path("result").path("data");
-    	
-    	String status = data.findValue("status").asText();
+	public static Boolean checkBotValidFromJsonNode(JsonNode data) {
+		String status = data.findValue("status").asText();
     	String startDate = data.findValue("startDate").asText();
     	String endDate = data.findValue("endDate").asText();
 		
