@@ -21,7 +21,7 @@ import reactor.core.publisher.Mono;
 @SuppressWarnings("ALL")
 @Slf4j
 @Service
-public class TelemetryService {
+public class PosthogService {
 	public WebClient getWebClient() {
 		return WebClient.builder()
 				.baseUrl(System.getenv("POSTHOG_TELEMETRY_URL"))
