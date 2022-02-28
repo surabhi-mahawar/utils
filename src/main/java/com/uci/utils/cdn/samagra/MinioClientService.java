@@ -49,7 +49,6 @@ import reactor.core.publisher.Mono;
 @Getter
 @Setter
 public class MinioClientService {
-	private FusionAuthClient fusionAuth;
 	private MinioClientProp minioClientProp;
 	private RedisCacheService redisCacheService;
 	
@@ -60,25 +59,30 @@ public class MinioClientService {
 	 */
 	public String getCdnSignedUrl(String mediaName) {
 		String url = "";
-		MinioClient minioClient = getMinioClient();
-		log.info("minioClient: "+minioClient);
-        if(minioClient != null) {
-			try {
-				url = minioClient.getPresignedObjectUrl(
-	                GetPresignedObjectUrlArgs.builder()
-	                    .method(Method.GET)
-	                    .bucket(minioClientProp.bucketId)
-	                    .object(mediaName)
-	                    .expiry(1, TimeUnit.DAYS)
-	                    .build());
-			} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
-					| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
-					| IllegalArgumentException | IOException e) {
-				// TODO Auto-generated catch block
-				log.error("Exception in getCdnSignedUrl: "+e.getMessage());
-			}
-        }
-        log.info("minioClient url: "+url);
+		try {
+			MinioClient minioClient = getMinioClient();
+			log.info("minioClient: "+minioClient);
+	        if(minioClient != null) {
+				try {
+					url = minioClient.getPresignedObjectUrl(
+		                GetPresignedObjectUrlArgs.builder()
+		                    .method(Method.GET)
+		                    .bucket(minioClientProp.bucketId)
+		                    .object(mediaName)
+		                    .expiry(1, TimeUnit.DAYS)
+		                    .build());
+				} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
+						| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
+						| IllegalArgumentException | IOException e) {
+					// TODO Auto-generated catch block
+					log.error("Exception in getCdnSignedUrl: "+e.getMessage());
+				}
+	        }
+	        log.info("minioClient url: "+url);
+		} catch (Exception ex) {
+			log.error("Exception in getCdnSignedUrl: "+ex.getMessage());
+		}
+		
         return url;
     }
 	
@@ -89,7 +93,7 @@ public class MinioClientService {
 	private MinioClient getMinioClient() {
 		try {
 			StaticProvider provider = getMinioCredentialsProvider();
-			log.info("provider: "+provider);
+			log.info("provider: "+provider+", url: "+minioClientProp.cdnBaseUrl);
 			if(provider != null) {
 				return MinioClient.builder()
 						.endpoint(minioClientProp.cdnBaseUrl)
@@ -118,7 +122,7 @@ public class MinioClientService {
 				Integer duration = 36000;
 				String response = client.post().uri(builder -> builder.path(minioClientProp.bucketId)
 											.queryParam("Action", "AssumeRoleWithWebIdentity")
-											.queryParam("DurationSeconds", 36000) //duration: 24 Hours
+											.queryParam("DurationSeconds", 36000) //duration: 10 Hours
 											.queryParam("WebIdentityToken", token)
 											.queryParam("Version", "2011-06-15")
 											.build())
@@ -142,7 +146,7 @@ public class MinioClientService {
 					log.info("sessionToken: "+sessionToken+", accessKey: "+accessKey+",secretAccessKey: "+secretAccessKey);
 					
 					if(!accessKey.isEmpty() && !secretAccessKey.isEmpty() && !sessionToken.isEmpty()) {
-						return new StaticProvider(accessKey, secretAccessKey, "test");
+						return new StaticProvider(accessKey, secretAccessKey, sessionToken);
 					}
 		        } else {
 		        	if(node.path("ErrorResponse") != null 
@@ -221,7 +225,7 @@ public class MinioClientService {
 	private String getFusionAuthToken() {
 		String token = "";		
 		try {
-			ClientResponse<LoginResponse, Errors> clientResponse = fusionAuth.login(minioClientProp.loginRequest);
+			ClientResponse<LoginResponse, Errors> clientResponse = minioClientProp.fusionAuth.login(minioClientProp.loginRequest);
 			if(clientResponse.wasSuccessful()) {
 				token = clientResponse.successResponse.token;
 			}

@@ -19,6 +19,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.uci.utils.cdn.samagra.MinioClientProp;
 
+import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.api.LoginRequest;
 
 @Configuration
@@ -60,6 +61,12 @@ public class UtilAppConfiguration {
 	
 	@Value("${cdn.minio.url}")
 	private String minioUrl;
+	
+	@Value("${cdn.minio.fa.key}")
+	private String minioFAKey;
+	
+	@Value("${cdn.minio.fa.url}")
+	private String minioFAUrl;
 	
 	public Caffeine<Object, Object> caffeineCacheBuilder() {
 		return Caffeine.newBuilder()
@@ -103,11 +110,12 @@ public class UtilAppConfiguration {
 	@Bean
 	public MinioClientProp getMinioClientProp() {
 		UUID applicationId = UUID.fromString(minioAppId);
-		
+		System.out.println("Minio FA key & url :"+minioFAKey+", "+minioFAUrl);
 		return MinioClientProp.builder()
 				.loginRequest(new LoginRequest(applicationId, minioLoginId, minioPassword))
 				.cdnBaseUrl(minioUrl)
 				.bucketId(minioBucketId)
+				.fusionAuth(new FusionAuthClient(minioFAKey, minioFAUrl))
 				.build();
 	}
 }
