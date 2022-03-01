@@ -60,25 +60,29 @@ public class MinioClientService {
 	public String getCdnSignedUrl(String mediaName) {
 		String url = "";
 		try {
-			MinioClient minioClient = getMinioClient();
-			log.info("minioClient: "+minioClient);
-	        if(minioClient != null) {
-				try {
-					url = minioClient.getPresignedObjectUrl(
-		                GetPresignedObjectUrlArgs.builder()
-		                    .method(Method.GET)
-		                    .bucket(minioClientProp.bucketId)
-		                    .object(mediaName)
-		                    .expiry(1, TimeUnit.DAYS)
-		                    .build());
-				} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
-						| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
-						| IllegalArgumentException | IOException e) {
-					// TODO Auto-generated catch block
-					log.error("Exception in getCdnSignedUrl: "+e.getMessage());
-				}
-	        }
-	        log.info("minioClient url: "+url);
+			if(minioClientProp != null) {
+				MinioClient minioClient = getMinioClient();
+				log.info("minioClient: "+minioClient);
+		        if(minioClient != null) {
+					try {
+						url = minioClient.getPresignedObjectUrl(
+			                GetPresignedObjectUrlArgs.builder()
+			                    .method(Method.GET)
+			                    .bucket(minioClientProp.bucketId)
+			                    .object(mediaName)
+			                    .expiry(1, TimeUnit.DAYS)
+			                    .build());
+					} catch (InvalidKeyException | InsufficientDataException | InternalException
+							| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
+							| IllegalArgumentException | IOException e) {
+						// TODO Auto-generated catch block
+						log.error("Exception in getCdnSignedUrl: "+e.getMessage());
+					} catch (ErrorResponseException e1) {
+						log.error("Exception in getCdnSignedUrl: "+e1.getMessage()+", name: "+e1.getClass());
+					}
+		        }
+		        log.info("minioClient url: "+url);
+			}
 		} catch (Exception ex) {
 			log.error("Exception in getCdnSignedUrl: "+ex.getMessage());
 		}
@@ -146,7 +150,8 @@ public class MinioClientService {
 					log.info("sessionToken: "+sessionToken+", accessKey: "+accessKey+",secretAccessKey: "+secretAccessKey);
 					
 					if(!accessKey.isEmpty() && !secretAccessKey.isEmpty() && !sessionToken.isEmpty()) {
-						return new StaticProvider(accessKey, secretAccessKey, sessionToken);
+//						return new StaticProvider(accessKey, secretAccessKey, sessionToken);
+						return new StaticProvider("test", secretAccessKey, sessionToken);
 					}
 		        } else {
 		        	if(node.path("ErrorResponse") != null 

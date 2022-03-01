@@ -109,7 +109,11 @@ public class UtilAppConfiguration {
 	
 	@Bean
 	public MinioClientProp getMinioClientProp() {
-		UUID applicationId = UUID.fromString(minioAppId);
+		UUID applicationId = null;
+		if(!minioAppId.isEmpty()) {
+			applicationId = UUID.fromString(minioAppId);
+		}	
+		
 		System.out.println("Minio FA key & url :"+minioFAKey+", "+minioFAUrl);
 		return MinioClientProp.builder()
 				.loginRequest(new LoginRequest(applicationId, minioLoginId, minioPassword))
