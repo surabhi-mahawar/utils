@@ -150,8 +150,8 @@ public class MinioClientService {
 					log.info("sessionToken: "+sessionToken+", accessKey: "+accessKey+",secretAccessKey: "+secretAccessKey);
 					
 					if(!accessKey.isEmpty() && !secretAccessKey.isEmpty() && !sessionToken.isEmpty()) {
-//						return new StaticProvider(accessKey, secretAccessKey, sessionToken);
-						return new StaticProvider("test", secretAccessKey, sessionToken);
+						return new StaticProvider(accessKey, secretAccessKey, sessionToken);
+//						return new StaticProvider("test", secretAccessKey, sessionToken);
 					}
 		        } else {
 		        	if(node.path("ErrorResponse") != null 
