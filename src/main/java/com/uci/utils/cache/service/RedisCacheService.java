@@ -100,12 +100,12 @@ public class RedisCacheService {
      * @param value
      */
     private void deleteCache(String key, String name) {
-    	log.info("Delete redis cache for key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
-    	HashOperations hashOperations = redisTemplate.opsForHash();
-    	try {
+        log.info("Delete redis cache for key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
+        HashOperations hashOperations = redisTemplate.opsForHash();
+        try {
             hashOperations.delete(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
         } catch (Exception e) {
-        	log.info("Exception in redis deleteCache: "+e.getMessage());
+            log.info("Exception in redis deleteCache: "+e.getMessage());
         }
     }
     
