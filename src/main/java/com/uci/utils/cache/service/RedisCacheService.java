@@ -53,6 +53,14 @@ public class RedisCacheService {
         setCache("XMessageDAO", name, value);
     }
     
+    /**
+     * Delete XMessageDao Object in cache by name
+     * @param name
+     */
+    public void deleteXMessageDaoCache(String name) {
+        deleteCache("XMessageDAO", name);
+    }
+    
 
     /**
      * Get cache by key & name
@@ -82,6 +90,22 @@ public class RedisCacheService {
         	hashOperations.delete(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
         	
         	log.info("Exception in redis setCache: "+e.getMessage());
+        }
+    }
+    
+    /**
+     * Set cache value by key & name
+     * @param key
+     * @param name
+     * @param value
+     */
+    private void deleteCache(String key, String name) {
+    	log.info("Delete redis cache for key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
+    	HashOperations hashOperations = redisTemplate.opsForHash();
+    	try {
+            hashOperations.delete(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
+        } catch (Exception e) {
+        	log.info("Exception in redis deleteCache: "+e.getMessage());
         }
     }
     
