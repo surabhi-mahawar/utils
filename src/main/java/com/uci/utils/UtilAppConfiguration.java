@@ -38,13 +38,13 @@ public class UtilAppConfiguration {
 	@Value("${caffeine.cache.exprie.duration.seconds}")
 	public Integer cacheExpireDuration;
 	
-	@Value("${spring.redis.database}")
+	@Value("${spring.redis.db}")
 	private String redisDb;
 	
 	@Value("${spring.redis.host}")
 	private String redisHost;
 	
-	@Value("${spring.redis.port}")
+	@Value("${spring.redis.number.port}")
 	private String redisPort;
     
     @Value("${cdn.minio.login.id}")
@@ -90,6 +90,7 @@ public class UtilAppConfiguration {
 	JedisConnectionFactory jedisConnectionFactory() {
 		JedisConnectionFactory jedisConFactory
 	      = new JedisConnectionFactory();
+	    System.out.println("redisPort:"+redisPort+",redisDb: "+redisDb+", redisHost: "+redisHost);
 	    jedisConFactory.setHostName(redisHost);
 	    Integer port = Integer.parseInt(redisPort);
 	    jedisConFactory.setPort(port);
