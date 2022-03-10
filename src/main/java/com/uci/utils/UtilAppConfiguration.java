@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.uci.utils.azure.AzureBlobProperties;
 import com.uci.utils.cdn.samagra.MinioClientProp;
 
 import io.fusionauth.client.FusionAuthClient;
@@ -67,6 +68,15 @@ public class UtilAppConfiguration {
 	
 	@Value("${cdn.minio.fa.url}")
 	private String minioFAUrl;
+	
+	@Value("${spring.azure.blob.store.url}")
+	private String azureUrl;
+	
+	@Value("${spring.azure.blob.store.token}")
+	private String azureToken;
+	
+	@Value("${spring.azure.blob.store.container.name}")
+	private String azureContainer;
 	
 	public Caffeine<Object, Object> caffeineCacheBuilder() {
 		return Caffeine.newBuilder()
@@ -123,4 +133,12 @@ public class UtilAppConfiguration {
 				.fusionAuth(new FusionAuthClient(minioFAKey, minioFAUrl))
 				.build();
 	}
+    
+    @Bean
+    AzureBlobProperties azureBlobProperties() {
+    	return AzureBlobProperties.builder().url(azureUrl)
+			    .token(azureToken)
+			    .container(azureContainer)
+			    .build();
+    }
 }
