@@ -23,6 +23,8 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.sas.BlobContainerSasPermission;
 import com.azure.storage.blob.sas.BlobSasPermission;
@@ -44,12 +46,18 @@ import lombok.extern.slf4j.Slf4j;
 public class AzureBlobService {
 
 	private AzureBlobProperties properties;
-	private BlobContainerClient client;
+	private BlobServiceClient serviceClient;
+	private BlobContainerClient containerClient;
 
 	public AzureBlobService(AzureBlobProperties properties) {
 		this.properties = properties;
-		this.client = new BlobContainerClientBuilder().endpoint(properties.url).sasToken(properties.token)
-				.containerName(properties.container).buildClient();
+		if(properties.accountName != null && !properties.accountName.isEmpty()
+				&& properties.accountKey != null && !properties.accountKey.isEmpty()
+				&& properties.container != null && !properties.container.isEmpty()) {
+			String connectionStr = "DefaultEndpointsProtocol=https;AccountName="+properties.accountName+";AccountKey="+properties.accountKey+";EndpointSuffix=core.windows.net";
+			this.serviceClient = new BlobServiceClientBuilder().connectionString(connectionStr).buildClient();
+			this.containerClient = serviceClient.getBlobContainerClient(properties.container);
+		}
 	}
 
 	/**
@@ -73,17 +81,34 @@ public class AzureBlobService {
 	 */
 	public String getFileSignedUrl(String name) {
 		try {
-			BlobClient blobClient = client.getBlobClient(name);
-			log.info("getBlobUrl: " + blobClient.getBlobUrl());
+			if(this.containerClient != null) {
+				BlobClient blobClient = containerClient.getBlobClient(name);
+				log.info("getBlobUrl: " + blobClient.getBlobUrl());
 
-			if (blobClient != null && blobClient.getBlobUrl() != null) {
-				return blobClient.getBlobUrl() + "?" + properties.token;
+				if (blobClient != null && blobClient.getBlobUrl() != null) {
+					return blobClient.getBlobUrl() + "?" + generateSASToken(blobClient);
+				}
 			}
 		} catch (Exception e) {
 			log.error("Exception in azure getFileSignedUrl: " + e.getMessage());
 			e.printStackTrace();
 		}
 		return "";
+	}
+
+	/**
+	 * Generate SAS token
+	 * @param blobClient
+	 * @return
+	 */
+	public String generateSASToken(BlobClient blobClient) {
+		// Generate a sas using a blob client
+		OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
+		BlobSasPermission blobSasPermission = new BlobSasPermission().setReadPermission(true);
+		BlobServiceSasSignatureValues serviceSasValues = new BlobServiceSasSignatureValues(expiryTime,
+				blobSasPermission);
+		
+		return blobClient.generateSas(serviceSasValues);
 	}
 
 	/**
@@ -94,13 +119,15 @@ public class AzureBlobService {
 	 */
 	public byte[] getFile(String name) {
 		try {
-			BlobClient blobClient = client.getBlobClient(name);
-
-			File temp = new File(name);
-			BlobProperties properties = blobClient.downloadToFile(temp.getPath());
-			byte[] content = Files.readAllBytes(Paths.get(temp.getPath()));
-			temp.delete();
-			return content;
+			if(this.containerClient != null) {
+				BlobClient blobClient = containerClient.getBlobClient(name);
+	
+				File temp = new File(name);
+				BlobProperties properties = blobClient.downloadToFile(temp.getPath());
+				byte[] content = Files.readAllBytes(Paths.get(temp.getPath()));
+				temp.delete();
+				return content;
+			}
 		} catch (Exception e) {
 			log.error("Exception in azure getFile: " + e.getMessage());
 			e.printStackTrace();
@@ -110,40 +137,43 @@ public class AzureBlobService {
 
 	/**
 	 * Upload File from URL to Azure Blob Storage
+	 * 
 	 * @param urlStr
 	 */
 	public String uploadFile(String urlStr, String mimeType) {
 		try {
-			/* Find File Name */
-			Path path = new File(urlStr).toPath();
-			String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
-			Random rand = new Random();
-			String name = UUID.randomUUID().toString()+"."+ext;
-
-			log.info("Azure Blob Storage Container File Name :"+name);
-			
-			/* File input stream to copy from */
-			URL url = new URL(urlStr);
-			InputStream in = url.openStream();
-
-			/* Create temp file to copy to */
-			String localPath = "/tmp/";
-			String filePath = localPath + name;
-			File temp = new File(filePath);
-			temp.createNewFile();
-			
-			// Copy file from url to temp file
-			Files.copy(in, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
-
-			// Get a reference to a blob
-			BlobClient blobClient = client.getBlobClient(name);
-			// Upload the blob
-			blobClient.uploadFromFile(filePath);
-			// Delete temp file
-			temp.delete();
-			
-			// Return blob name
-			return blobClient.getBlobName();
+			if(this.containerClient != null) {
+				/* Find File Name */
+				Path path = new File(urlStr).toPath();
+				String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
+				Random rand = new Random();
+				String name = UUID.randomUUID().toString() + "." + ext;
+	
+				log.info("Azure Blob Storage Container File Name :" + name);
+	
+				/* File input stream to copy from */
+				URL url = new URL(urlStr);
+				InputStream in = url.openStream();
+	
+				/* Create temp file to copy to */
+				String localPath = "/tmp/";
+				String filePath = localPath + name;
+				File temp = new File(filePath);
+				temp.createNewFile();
+	
+				// Copy file from url to temp file
+				Files.copy(in, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+	
+				// Get a reference to a blob
+				BlobClient blobClient = containerClient.getBlobClient(name);
+				// Upload the blob
+				blobClient.uploadFromFile(filePath);
+				// Delete temp file
+				temp.delete();
+	
+				// Return blob name
+				return blobClient.getBlobName();
+			}
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -151,7 +181,7 @@ public class AzureBlobService {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return "";
 	}
 }

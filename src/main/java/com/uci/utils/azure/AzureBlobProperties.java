@@ -10,7 +10,10 @@ import lombok.Setter;
 @Setter
 @Builder
 public class AzureBlobProperties {
-	public String url;
-	public String token;
+//	public String url;
+//	public String token;
+	
 	public String container;
+	public String accountKey;
+	public String accountName;
 }

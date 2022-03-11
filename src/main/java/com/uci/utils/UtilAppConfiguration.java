@@ -69,11 +69,11 @@ public class UtilAppConfiguration {
 	@Value("${cdn.minio.fa.url}")
 	private String minioFAUrl;
 	
-	@Value("${spring.azure.blob.store.url}")
-	private String azureUrl;
+	@Value("${spring.azure.blob.store.account.name}")
+	private String azureAccountName;
 	
-	@Value("${spring.azure.blob.store.token}")
-	private String azureToken;
+	@Value("${spring.azure.blob.store.account.key}")
+	private String azureAccountKey;
 	
 	@Value("${spring.azure.blob.store.container.name}")
 	private String azureContainer;
@@ -136,9 +136,10 @@ public class UtilAppConfiguration {
     
     @Bean
     AzureBlobProperties azureBlobProperties() {
-    	return AzureBlobProperties.builder().url(azureUrl)
-			    .token(azureToken)
-			    .container(azureContainer)
+    	return AzureBlobProperties.builder()
+    			.accountName(azureAccountName)
+			    .accountKey(azureAccountKey)
+    			.container(azureContainer)
 			    .build();
     }
 }
