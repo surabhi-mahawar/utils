@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
 
+import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
@@ -33,6 +35,7 @@ import com.azure.storage.common.sas.AccountSasPermission;
 import com.azure.storage.common.sas.AccountSasResourceType;
 import com.azure.storage.common.sas.AccountSasService;
 import com.azure.storage.common.sas.AccountSasSignatureValues;
+import com.microsoft.azure.storage.file.FileOutputStream;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -51,6 +54,7 @@ public class AzureBlobService {
 
 	public AzureBlobService(AzureBlobProperties properties) {
 		this.properties = properties;
+		System.out.println("accountName: "+properties.accountName+", key: "+properties.accountKey+", container: "+properties.container);
 		if(properties.accountName != null && !properties.accountName.isEmpty()
 				&& properties.accountKey != null && !properties.accountKey.isEmpty()
 				&& properties.container != null && !properties.container.isEmpty()) {
@@ -179,6 +183,47 @@ public class AzureBlobService {
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return "";
+	}
+
+	/**
+	 * Upload File from URL to Azure Blob Storage
+	 * 
+	 * @param urlStr
+	 */
+	public String uploadFileFromBinary(InputStream binary, String mimeType) {
+		try {
+			if(this.containerClient != null) {
+				/* Find File Name */
+				String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
+				Random rand = new Random();
+				String name = UUID.randomUUID().toString() + "." + ext;
+	
+				log.info("Azure Blob Storage Container File Name :" + name);
+	
+				/* Create temp file to copy to */
+				String localPath = "/tmp/";
+				String filePath = localPath + name;
+				File temp = new File(filePath);
+				temp.createNewFile();
+				
+				// Copy file from url to temp file
+				Files.copy(binary, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+				
+				// Get a reference to a blob
+				BlobClient blobClient = containerClient.getBlobClient(name);
+				
+				blobClient.uploadFromFile(filePath);
+				
+				temp.delete();
+	
+				// Return blob name
+				return blobClient.getBlobName();
+			}
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
