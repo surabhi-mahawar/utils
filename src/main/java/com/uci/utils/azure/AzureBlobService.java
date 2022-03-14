@@ -90,7 +90,7 @@ public class AzureBlobService {
 				log.info("getBlobUrl: " + blobClient.getBlobUrl());
 
 				if (blobClient != null && blobClient.getBlobUrl() != null) {
-					return blobClient.getBlobUrl() + "?" + generateSASToken(blobClient);
+					return blobClient.getBlobUrl() + "?" + generateBlobSASToken(blobClient);
 				}
 			}
 		} catch (Exception e) {
@@ -105,7 +105,7 @@ public class AzureBlobService {
 	 * @param blobClient
 	 * @return
 	 */
-	public String generateSASToken(BlobClient blobClient) {
+	public String generateBlobSASToken(BlobClient blobClient) {
 		// Generate a sas using a blob client
 		OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
 		BlobSasPermission blobSasPermission = new BlobSasPermission().setReadPermission(true);
@@ -113,6 +113,21 @@ public class AzureBlobService {
 				blobSasPermission);
 		
 		return blobClient.generateSas(serviceSasValues);
+	}
+	
+	/**
+	 * Generate SAS token
+	 * @param blobClient
+	 * @return
+	 */
+	public String generateContainerSASToken() {
+		// Generate a sas using a blob client
+		OffsetDateTime expiryTime = OffsetDateTime.now().plusMonths(3);
+		// Generate a sas using a container client
+		BlobContainerSasPermission containerSasPermission = new BlobContainerSasPermission().setCreatePermission(true).setListPermission(true).setReadPermission(true);
+		BlobServiceSasSignatureValues serviceSasValues =
+		    new BlobServiceSasSignatureValues(expiryTime, containerSasPermission);
+		return containerClient.generateSas(serviceSasValues);
 	}
 
 	/**
