@@ -107,7 +107,7 @@ public class AzureBlobService {
 	 */
 	public String generateBlobSASToken(BlobClient blobClient) {
 		// Generate a sas using a blob client
-		OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
+		OffsetDateTime expiryTime = OffsetDateTime.now().plusMonths(1);
 		BlobSasPermission blobSasPermission = new BlobSasPermission().setReadPermission(true);
 		BlobServiceSasSignatureValues serviceSasValues = new BlobServiceSasSignatureValues(expiryTime,
 				blobSasPermission);
@@ -164,14 +164,17 @@ public class AzureBlobService {
 	 * 
 	 * @param urlStr
 	 */
-	public String uploadFile(String urlStr, String mimeType) {
+	public String uploadFile(String urlStr, String mimeType, String name) {
 		try {
 			if(this.containerClient != null) {
 				/* Find File Name */
 				Path path = new File(urlStr).toPath();
 				String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
 				Random rand = new Random();
-				String name = UUID.randomUUID().toString() + "." + ext;
+				if(name == null || name.isEmpty()) {
+					name = UUID.randomUUID().toString();
+				}
+				name += "." + ext;
 	
 				log.info("Azure Blob Storage Container File Name :" + name);
 	
@@ -214,7 +217,7 @@ public class AzureBlobService {
 	 * 
 	 * @param urlStr
 	 */
-	public String uploadFileFromBinary(InputStream binary, String mimeType, String name) {
+	public String uploadFileFromInputStream(InputStream binary, String mimeType, String name) {
 		try {
 			if(this.containerClient != null) {
 				/* Find File Name */
