@@ -124,7 +124,12 @@ public class AzureBlobService {
 		// Generate a sas using a blob client
 		OffsetDateTime expiryTime = OffsetDateTime.now().plusMonths(3);
 		// Generate a sas using a container client
-		BlobContainerSasPermission containerSasPermission = new BlobContainerSasPermission().setCreatePermission(true).setListPermission(true).setReadPermission(true);
+		BlobContainerSasPermission containerSasPermission = new BlobContainerSasPermission()
+																	.setCreatePermission(true)
+																	.setAddPermission(true)
+																	.setListPermission(true)
+																	.setWritePermission(true)
+																	.setReadPermission(true);
 		BlobServiceSasSignatureValues serviceSasValues =
 		    new BlobServiceSasSignatureValues(expiryTime, containerSasPermission);
 		return containerClient.generateSas(serviceSasValues);
@@ -209,13 +214,16 @@ public class AzureBlobService {
 	 * 
 	 * @param urlStr
 	 */
-	public String uploadFileFromBinary(InputStream binary, String mimeType) {
+	public String uploadFileFromBinary(InputStream binary, String mimeType, String name) {
 		try {
 			if(this.containerClient != null) {
 				/* Find File Name */
 				String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
 				Random rand = new Random();
-				String name = UUID.randomUUID().toString() + "." + ext;
+				if(name == null || name.isEmpty()) {
+					name = UUID.randomUUID().toString();
+				}
+				name += "." + ext;
 	
 				log.info("Azure Blob Storage Container File Name :" + name);
 	
