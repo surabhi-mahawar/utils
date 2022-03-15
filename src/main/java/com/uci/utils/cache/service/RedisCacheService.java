@@ -34,6 +34,32 @@ public class RedisCacheService {
     public void setMinioCDNCache(String name, Object value) {
         setCache("MinioCDN", name, value);
     }
+
+    /**
+     * Get Language Object from cache by name
+     * @param name
+     * @return
+     */
+    public Object getLanguageCache(String name) {
+        return getCache("Language", name);
+    }
+    
+    /**
+     * Set Language Object in cache by name
+     * @param name
+     * @param value
+     */
+    public void setLanguageCache(String name, Object value) {
+        setCache("Language", name, value);
+    }
+    
+    /**
+     * Delete Language Object in cache by name
+     * @param name
+     */
+    public void deleteLanguageCache(String name) {
+        deleteCache("Language", name);
+    }
     
     /**
      * Get XMessageDao Object from cache by name
