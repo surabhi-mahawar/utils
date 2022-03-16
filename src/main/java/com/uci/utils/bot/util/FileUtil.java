@@ -93,6 +93,7 @@ public class FileUtil {
 		list.add("audio/wav");
 		list.add("audio/flac");
 		list.add("audio/ogg");
+		list.add("audio/ogg; codecs=opus");
 		list.add("audio/wma");
 		list.add("audio/x-ms-wma"); //wma
 		list.add("audio/mpeg");
