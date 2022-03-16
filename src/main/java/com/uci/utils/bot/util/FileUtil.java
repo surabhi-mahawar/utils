@@ -130,4 +130,33 @@ public class FileUtil {
 		return list;
 	}
 	
+	/**
+	 * Get File type by mime sub type 
+	 * @param type
+	 * @return
+	 */
+	public static String getFileTypeByMimeSubTypeString(String type) {
+		String fileType = type;
+		switch (type) {
+			case "vnd.openxmlformats-officedocument.wordprocessingml.document":
+				fileType = "docx";
+				break;
+			case "msword":
+				fileType = "doc";
+				break;
+			case "x-matroska":
+				fileType = "mkv";
+				break;
+			case "x-flv":
+				fileType = "flv";
+				break;
+			case "x-ms-wma":
+				fileType = "wma";
+				break;
+			default:
+				break;
+		}
+		return fileType;
+	}
+	
 }

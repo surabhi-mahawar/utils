@@ -36,6 +36,7 @@ import com.azure.storage.common.sas.AccountSasResourceType;
 import com.azure.storage.common.sas.AccountSasService;
 import com.azure.storage.common.sas.AccountSasSignatureValues;
 import com.microsoft.azure.storage.file.FileOutputStream;
+import com.uci.utils.bot.util.FileUtil;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -221,7 +222,8 @@ public class AzureBlobService {
 		try {
 			if(this.containerClient != null) {
 				/* Find File Name */
-				String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
+				String ext = FileUtil.getFileTypeByMimeSubTypeString(MimeTypeUtils.parseMimeType(mimeType).getSubtype());
+				
 				Random rand = new Random();
 				if(name == null || name.isEmpty()) {
 					name = UUID.randomUUID().toString();
