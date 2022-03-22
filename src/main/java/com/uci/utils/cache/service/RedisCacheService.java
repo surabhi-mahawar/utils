@@ -36,6 +36,32 @@ public class RedisCacheService {
     }
     
     /**
+     * Get Fusion Auth User ID Object from cache by name
+     * @param name
+     * @return
+     */
+    public Object getFAUserIDForAppCache(String name) {
+        return getCache("FAUserID", name);
+    }
+    
+    /**
+     * Set Fusion Auth User ID Object in cache by name
+     * @param name
+     * @param value
+     */
+    public void setFAUserIDForAppCache(String name, Object value) {
+        setCache("FAUserID", name, value);
+    }
+    
+    /**
+     * Delete Fusion Auth User ID Object in cache by name
+     * @param name
+     */
+    public void deleteFAUserIDForAppCache(String name) {
+        deleteCache("FAUserID", name);
+    }
+    
+    /**
      * Get XMessageDao Object from cache by name
      * @param name
      * @return
@@ -69,9 +95,10 @@ public class RedisCacheService {
      * @return
      */
     private Object getCache(String key, String name) {
-    	log.info("Find redis cache by key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
     	HashOperations hashOperations = redisTemplate.opsForHash();
-        return hashOperations.get(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
+        Object result = hashOperations.get(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
+        log.info("Find redis cache by key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name)+", value: "+result);
+    	return result;
     }
     
     /**
