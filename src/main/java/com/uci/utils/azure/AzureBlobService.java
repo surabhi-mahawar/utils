@@ -170,7 +170,8 @@ public class AzureBlobService {
 			if(this.containerClient != null) {
 				/* Find File Name */
 				Path path = new File(urlStr).toPath();
-				String ext = MimeTypeUtils.parseMimeType(mimeType).getSubtype();
+				String ext = FileUtil.getFileTypeByMimeSubTypeString(MimeTypeUtils.parseMimeType(mimeType).getSubtype());
+				
 				Random rand = new Random();
 				if(name == null || name.isEmpty()) {
 					name = UUID.randomUUID().toString();
