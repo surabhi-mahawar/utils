@@ -24,6 +24,6 @@ public class Context {
   private String did;
   private String sid;
   private List<Map<String, Object>> cdata;
-  private Map<String, Object> rollup;
+  private Map<String, String> rollup;
 
 }
