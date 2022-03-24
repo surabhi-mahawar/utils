@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.uci.utils.azure.AzureBlobProperties;
 import com.uci.utils.cdn.samagra.MinioClientProp;
 
 import io.fusionauth.client.FusionAuthClient;
@@ -38,13 +39,13 @@ public class UtilAppConfiguration {
 	@Value("${caffeine.cache.exprie.duration.seconds}")
 	public Integer cacheExpireDuration;
 	
-	@Value("${spring.redis.database}")
+	@Value("${spring.redis.db}")
 	private String redisDb;
 	
 	@Value("${spring.redis.host}")
 	private String redisHost;
 	
-	@Value("${spring.redis.port}")
+	@Value("${spring.redis.number.port}")
 	private String redisPort;
     
     @Value("${cdn.minio.login.id}")
@@ -68,6 +69,15 @@ public class UtilAppConfiguration {
 	@Value("${cdn.minio.fa.url}")
 	private String minioFAUrl;
 	
+	@Value("${spring.azure.blob.store.account.name}")
+	private String azureAccountName;
+	
+	@Value("${spring.azure.blob.store.account.key}")
+	private String azureAccountKey;
+	
+	@Value("${spring.azure.blob.store.container.name}")
+	private String azureContainer;
+	
 	public Caffeine<Object, Object> caffeineCacheBuilder() {
 		return Caffeine.newBuilder()
 				.maximumSize(cacheMaxSize)
@@ -90,6 +100,7 @@ public class UtilAppConfiguration {
 	JedisConnectionFactory jedisConnectionFactory() {
 		JedisConnectionFactory jedisConFactory
 	      = new JedisConnectionFactory();
+	    System.out.println("redisPort:"+redisPort+",redisDb: "+redisDb+", redisHost: "+redisHost);
 	    jedisConFactory.setHostName(redisHost);
 	    Integer port = Integer.parseInt(redisPort);
 	    jedisConFactory.setPort(port);
@@ -122,4 +133,13 @@ public class UtilAppConfiguration {
 				.fusionAuth(new FusionAuthClient(minioFAKey, minioFAUrl))
 				.build();
 	}
+    
+    @Bean
+    AzureBlobProperties azureBlobProperties() {
+    	return AzureBlobProperties.builder()
+    			.accountName(azureAccountName)
+			    .accountKey(azureAccountKey)
+    			.container(azureContainer)
+			    .build();
+    }
 }

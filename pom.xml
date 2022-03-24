@@ -175,6 +175,20 @@
 			<type>jar</type>
 		</dependency>
 		<!-- Redis Dependencies - End  -->
+		
+		<!-- Azure Dependencies - Start -->
+		<dependency>
+			<groupId>com.microsoft.azure</groupId>
+			<artifactId>azure-storage</artifactId>
+			<version>8.4.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-storage-blob</artifactId>
+			<version>12.14.4</version>
+		</dependency>
+		<!-- Azure Dependencies - End -->
 	</dependencies>
 
 	<!-- <build> -->

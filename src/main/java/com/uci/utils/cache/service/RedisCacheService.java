@@ -1,7 +1,9 @@
 package com.uci.utils.cache.service;
 
 import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
@@ -22,8 +24,8 @@ public class RedisCacheService {
      * @param name
      * @return
      */
-    public Object getMinioCDNCache(String name) {
-        return getCache("MinioCDN", name);
+    public Object getMinioCDNCache(String key) {
+        return getCache("MinioCDN", key);
     }
     
     /**
@@ -31,8 +33,34 @@ public class RedisCacheService {
      * @param name
      * @param value
      */
-    public void setMinioCDNCache(String name, Object value) {
-        setCache("MinioCDN", name, value);
+    public void setMinioCDNCache(String key, Object value) {
+        setCache("MinioCDN", key, value);
+    }
+    
+    /**
+     * Get Fusion Auth User ID Object from cache by name
+     * @param name
+     * @return
+     */
+    public Object getFAUserIDForAppCache(String key) {
+        return getCache("FAUserID", key);
+    }
+    
+    /**
+     * Set Fusion Auth User ID Object in cache by name
+     * @param name
+     * @param value
+     */
+    public void setFAUserIDForAppCache(String key, Object value) {
+        setCache("FAUserID", key, value);
+    }
+    
+    /**
+     * Delete Fusion Auth User ID Object in cache by name
+     * @param name
+     */
+    public void deleteFAUserIDForAppCache(String key) {
+        deleteCache("FAUserID", key);
     }
 
     /**
@@ -66,8 +94,8 @@ public class RedisCacheService {
      * @param name
      * @return
      */
-    public Object getXMessageDaoCache(String name) {
-        return getCache("XMessageDAO", name);
+    public Object getXMessageDaoCache(String key) {
+        return getCache("XMessageDAO", key);
     }
     
     /**
@@ -75,17 +103,29 @@ public class RedisCacheService {
      * @param name
      * @param value
      */
-    public void setXMessageDaoCache(String name, Object value) {
-        setCache("XMessageDAO", name, value);
+    public void setXMessageDaoCache(String key, Object value) {
+        setCache("XMessageDAO", key, value);
     }
     
     /**
      * Delete XMessageDao Object in cache by name
      * @param name
      */
-    public void deleteXMessageDaoCache(String name) {
-        deleteCache("XMessageDAO", name);
+    public void deleteXMessageDaoCache(String key) {
+        deleteCache("XMessageDAO", key);
     }
+    
+    /**
+     * Get all caches
+     * @param key
+     * @param name
+     * @return
+     */
+//    private Object getAllCache() {
+//    	ListOperations<String, Object> listOperations = redisTemplate.opsForList();
+////        log.info("Find redis cache by key: "+redisKeyWithPrefix(prefix, key));
+//    	return result;
+//    }
     
 
     /**
@@ -94,10 +134,11 @@ public class RedisCacheService {
      * @param name
      * @return
      */
-    private Object getCache(String key, String name) {
-    	log.info("Find redis cache by key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
-    	HashOperations hashOperations = redisTemplate.opsForHash();
-        return hashOperations.get(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
+    private Object getCache(String prefix, String key) {
+    	ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
+        Object result = valOperations.get(redisKeyWithPrefix(prefix, key));
+        log.info("Find redis cache by key: "+redisKeyWithPrefix(prefix, key));
+    	return result;
     }
     
     /**
@@ -106,14 +147,15 @@ public class RedisCacheService {
      * @param name
      * @param value
      */
-    private void setCache(String key, String name, Object value) {
-    	log.info("Set redis cache for key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
-    	HashOperations hashOperations = redisTemplate.opsForHash();
-    	try {
-            hashOperations.put(redisKeyWithPrefix(key), redisKeyWithPrefix(name), value);
+    private void setCache(String prefix, String key, Object value) {
+    	log.info("Set redis cache for key: "+redisKeyWithPrefix(prefix, key));
+    	ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
+        try {
+        	valOperations.set(redisKeyWithPrefix(prefix, key), value);
         } catch (Exception e) {
         	/* If redis cache not able to set, delete cache */
-        	hashOperations.delete(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
+        	redisTemplate.delete(redisKeyWithPrefix(prefix, key));
+        	e.printStackTrace();
         	
         	log.info("Exception in redis setCache: "+e.getMessage());
         }
@@ -125,11 +167,11 @@ public class RedisCacheService {
      * @param name
      * @param value
      */
-    private void deleteCache(String key, String name) {
-        log.info("Delete redis cache for key: "+redisKeyWithPrefix(key)+", name: "+redisKeyWithPrefix(name));
-        HashOperations hashOperations = redisTemplate.opsForHash();
+    public void deleteCache(String prefix, String key) {
+        log.info("Delete redis cache for key: "+redisKeyWithPrefix(prefix, key));
+        ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
         try {
-            hashOperations.delete(redisKeyWithPrefix(key), redisKeyWithPrefix(name));
+        	redisTemplate.delete(redisKeyWithPrefix(prefix, key));
         } catch (Exception e) {
             log.info("Exception in redis deleteCache: "+e.getMessage());
         }
@@ -140,7 +182,7 @@ public class RedisCacheService {
      * @param key
      * @return
      */
-    private String redisKeyWithPrefix(String key) {
-    	return System.getenv("ENV")+"-"+key;
+    private String redisKeyWithPrefix(String prefix, String key) {
+    	return System.getenv("ENV")+"-"+prefix+": "+key;
     }
 }
