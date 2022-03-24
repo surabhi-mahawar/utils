@@ -432,5 +432,39 @@ public class UserService {
 			return true;
 		}
 	}
+
+	public JSONObject getUserByPhoneFromFederatedServers(String campaignID, String phone){
+        String baseURL = CAMPAIGN_URL + "/admin/v1/bot/getFederatedUsersByPhone/" + campaignID + "/" + phone;
+
+        OkHttpClient client = new OkHttpClient().newBuilder()
+                .connectTimeout(90, TimeUnit.SECONDS)
+                .writeTimeout(90, TimeUnit.SECONDS)
+                .readTimeout(90, TimeUnit.SECONDS)
+                .build();
+        
+        MediaType mediaType = MediaType.parse("application/json");
+        Request request = new Request.Builder()
+                .url(baseURL)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("admin-token", CAMPAIGN_ADMIN_TOKEN)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            JSONObject users = new JSONObject(response.body().string());
+            try{
+            	log.info("campaignID: "+campaignID+", phone: "+phone+", users data: "+users.getJSONObject("result"));
+                JSONObject user = users.getJSONObject("result").getJSONObject("data").getJSONObject("user");
+                user.put("is_registered", "yes");
+                return user;
+            }catch (Exception e){
+                JSONObject user = new JSONObject();
+                user.put("is_registered", "no");
+                return user;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
 //%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%95%E0%A4%BE%E0%A4%B0%20Singh%20Reena%20Vijay%20Bahadur%20%E0%A4%9C%E0%A5%80!%0A%0A%E0%A4%AE%E0%A4%BF%E0%A4%B6%E0%A4%A8%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A5%87%E0%A4%B0%E0%A4%A3%E0%A4%BE%20%E0%A4%B8%E0%A5%87%20%E0%A4%9C%E0%A5%81%E0%A5%9C%E0%A4%A8%E0%A5%87%20%E0%A4%95%E0%A5%87%20%E0%A4%B2%E0%A4%BF%E0%A4%8F%20%E0%A4%86%E0%A4%AA%E0%A4%95%E0%A4%BE%20%E0%A4%A7%E0%A4%A8%E0%A5%8D%E0%A4%AF%E0%A4%B5%E0%A4%BE%E0%A4%A6%E0%A5%A4%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A4%E0%A4%BF%20%E0%A4%AE%E0%A4%BE%E0%A4%B9%20%E0%A4%86%E0%A4%AA%E0%A4%95%E0%A5%87%20%E0%A4%A8%E0%A5%8D%E0%A4%AF%E0%A4%BE%E0%A4%AF%20%E0%A4%AA%E0%A4%82%E0%A4%9A%E0%A4%BE%E0%A4%AF%E0%A4%A4%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B6%E0%A4%BF%E0%A4%95%E0%A5%8D%E0%A4%B7%E0%A4%95%20%E0%A4%B8%E0%A4%82%E0%A4%95%E0%A5%81%E0%A4%B2%20%E0%A4%A6%E0%A5%8D%E0%A4%B5%E0%A4%BE%E0%A4%B0%E0%A4%BE%20%E0%A4%B8%E0%A4%AD%E0%A5%80%20%E0%A4%B6%E0%A4%BF%E0%A4%95%E0%A5%8D%E0%A4%B7%E0%A4%95%E0%A5%8B%E0%A4%82%20%E0%A4%8F%E0%A4%B5%E0%A4%82%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A7%E0%A4%BE%E0%A4%A8%E0%A4%BE%E0%A4%A7%E0%A5%8D%E0%A4%AF%E0%A4%BE%E0%A4%AA%E0%A4%95%E0%A5%8B%E0%A4%82%20%E0%A4%95%E0%A5%80%20%E0%A4%8F%E0%A4%95%20%E0%A4%AC%E0%A5%88%E0%A4%A0%E0%A4%95/%E0%A4%95%E0%A4%BE%E0%A4%B0%E0%A5%8D%E0%A4%AF%E0%A4%B6%E0%A4%BE%E0%A4%B2%E0%A4%BE%20%E0%A4%86%E0%A4%AF%E0%A5%8B%E0%A4%9C%E0%A4%BF%E0%A4%A4%20%E0%A4%95%E0%A5%80%20%E0%A4%9C%E0%A4%BE%E0%A4%A8%E0%A5%80%20%E0%A4%B9%E0%A5%88%20I%20%0A%0A%E0%A4%87%E0%A4%B8%20%E0%A4%B5%E0%A5%8D%E0%A4%B9%E0%A4%BE%E0%A4%9F%E0%A5%8D%E0%A4%B8%E0%A4%AA%E0%A5%8D%E0%A4%AA%20%E0%A4%A8%E0%A4%82%E0%A4%AC%E0%A4%B0%20%E0%A4%95%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A7%E0%A5%8D%E0%A4%AF%E0%A4%AE%20%E0%A4%B8%E0%A5%87%20%E0%A4%87%E0%A4%B8%20%E0%A4%AC%E0%A5%88%E0%A4%A0%E0%A4%95%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A4%E0%A4%BF%E0%A4%AD%E0%A4%BE%E0%A4%97%20%E0%A4%95%E0%A4%B0%E0%A4%A8%E0%A5%87%20%E0%A4%95%E0%A5%87%20%E0%A4%AC%E0%A4%BE%E0%A4%A6%20%E0%A4%95%E0%A5%81%E0%A4%9B%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%B6%E0%A5%8D%E0%A4%A8%E0%A5%8B%E0%A4%82%20%E0%A4%95%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A7%E0%A5%8D%E0%A4%AF%E0%A4%AE%20%E0%A4%B8%E0%A5%87%20%E0%A4%85%E0%A4%AA%E0%A4%A8%E0%A4%BE%20feedback%20%E0%A4%A6%E0%A5%87%E0%A4%82%20I%20*Feedback%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%86%E0%A4%AA%E0%A4%95%E0%A5%8B%205-7%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%B6%E0%A5%8D%E0%A4%A8%E0%A5%8B%E0%A4%82%20%E0%A4%95%E0%A4%BE%20%E0%A4%89%E0%A4%A4%E0%A5%8D%E0%A4%A4%E0%A4%B0%20%E0%A4%A6%E0%A5%87%E0%A4%A8%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A4%BE,%20%E0%A4%9C%E0%A4%BF%E0%A4%B8%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%BF%E0%A4%B0%E0%A5%8D%E0%A4%AB%202%20%E0%A4%AE%E0%A4%BF%E0%A4%A8%E0%A4%9F%20%E0%A4%B2%E0%A4%97%E0%A5%87%E0%A4%82%E0%A4%97%E0%A5%87I*%0A%0AFeedback%20%E0%A4%AD%E0%A4%B0%E0%A4%A8%E0%A5%87%20%E0%A4%95%E0%A5%87%20%E0%A4%B2%E0%A4%BF%E0%A4%8F%20%E0%A4%A8%E0%A5%80%E0%A4%9A%E0%A5%87%20%E0%A4%A6%E0%A4%BF%E0%A4%8F%20%E0%A4%97%E0%A4%8F%20%E0%A4%AC%E0%A4%9F%E0%A4%A8%20%E2%80%98*%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%95%E0%A4%BE%E0%A4%B0%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A5%87%E0%A4%B0%E0%A4%A3%E0%A4%BE%20%E0%A4%AC%E0%A5%89%E0%A4%9F*%E2%80%99%20%E0%A4%AA%E0%A4%B0%20%E0%A4%95%E0%A5%8D%E0%A4%B2%E0%A4%BF%E0%A4%95%20%E0%A4%95%E0%A4%B0%E0%A5%87%E0%A4%82%20I%0A%0A%E0%A4%A7%E0%A4%A8%E0%A5%8D%E0%A4%AF%E0%A4%B5%E0%A4%BE%E0%A4%A6!%20%0A%E0%A4%AC%E0%A5%87%E0%A4%B8%E0%A4%BF%E0%A4%95%20%E0%A4%B6%E0%A4%BF%E0%A4%95%E0%A5%8D%E0%A4%B7%E0%A4%BE%20%E0%A4%B5%E0%A4%BF%E0%A4%AD%E0%A4%BE%E0%A4%97
