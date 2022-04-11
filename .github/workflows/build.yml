@@ -52,7 +52,7 @@ jobs:
           distribution: 'temurin'
           server-id: github
           username: surabhi-mahawar
-          password: GITHUB_TOKEN
+          password: ${{ secrets.TOKEN }}
 
       - name: Cache Maven packages
         uses: actions/cache@v3
