@@ -55,7 +55,7 @@ jobs:
           password: ${{ secrets.TOKEN }}
 
       - name: Cache Maven packages
-        uses: actions/cache@v3
+        uses: actions/cache@v2
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
@@ -63,5 +63,9 @@ jobs:
 
       - name: Deploy
         run: mvn -DskipTests -DuseGitHubPackages deploy
+        with:
+          server-id: github
+          username: surabhi-mahawar
+          password: ${{ secrets.TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
