@@ -63,5 +63,9 @@ jobs:
 
       - name: Deploy
         run: mvn -DskipTests -DuseGitHubPackages deploy
+        with:
+          server-id: github
+          username: surabhi-mahawar
+          password: ${{ secrets.TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
