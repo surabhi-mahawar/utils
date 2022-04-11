@@ -51,7 +51,7 @@ jobs:
           java-version: 11
           distribution: 'temurin'
           server-id: github
-          server-username: surabhi-mahawar
+          server-username: GITHUB_USERNAME
           server-password: GITHUB_TOKEN
 
       - name: Cache Maven packages
@@ -62,6 +62,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2-
 
       - name: Deploy
-        run: mvn -DskipTests -DuseGitHubPackages deploy
+        run: mvn clean -DskipTests -Pgithub deploy
         env:
+          GITHUB_USERNAME: ${{ secrets.USERNAME }}
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
