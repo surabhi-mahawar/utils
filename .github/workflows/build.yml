@@ -58,4 +58,3 @@ jobs:
         env:
           GITHUB_USERNAME: ${{ secrets.USERNAME }}
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
-
