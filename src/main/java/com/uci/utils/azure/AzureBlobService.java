@@ -11,6 +11,8 @@ import java.time.OffsetDateTime;
 import java.util.Random;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -161,7 +163,7 @@ public class AzureBlobService {
 	 * 
 	 * @param urlStr
 	 */
-	public String uploadFile(String urlStr, String mimeType, String name) {
+	public String uploadFile(String urlStr, String mimeType, String name, Double maxSizeForMedia) {
 		try {
 			if(this.containerClient != null) {
 				/* Find File Name */
@@ -181,8 +183,7 @@ public class AzureBlobService {
 				byte[] inputBytes = url.openStream().readAllBytes();
 
 				/* Discard if file size is greater than MAX_SIZE_FOR_MEDIA */
-				Double maxSizeForMedia = Double.valueOf(System.getenv("MAX_SIZE_FOR_MEDIA"));
-				if(inputBytes.length > maxSizeForMedia){
+				if(maxSizeForMedia != null && inputBytes.length > maxSizeForMedia){
 					log.info("file size is greater than limit : " + inputBytes.length);
 					return "";
 				}

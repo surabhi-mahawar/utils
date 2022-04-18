@@ -51,8 +51,7 @@ public class UserService {
 	private static String shortnrBaseURL = "http://localhost:9999";
 
 	public static User findByEmail(String email) {
-		FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-				"http://134.209.150.161:9011");
+		FusionAuthClient staticClient = getFusionAuthClient();
 		ClientResponse<UserResponse, Errors> response = staticClient.retrieveUserByEmail(email);
 		if (response.wasSuccessful()) {
 			return response.successResponse.user;
@@ -66,9 +65,13 @@ public class UserService {
 		return null;
 	}
 
-	public static User findByPhone(String phone) {
-		FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
+	protected static FusionAuthClient getFusionAuthClient() {
+		return new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
 				"http://134.209.150.161:9011");
+	}
+
+	public static User findByPhone(String phone) {
+		FusionAuthClient staticClient = getFusionAuthClient();
 		UserSearchCriteria usc = new UserSearchCriteria();
 		usc.queryString = "*" + phone + "*";
 		usc.numberOfResults = 100;
@@ -85,7 +88,7 @@ public class UserService {
 	}
 
 	public static User findByPhoneAndCampaign(String phone, JsonNode campaign) {
-//        FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
+//        FusionAuthClient staticClient = getFusionAuthClient();
 //        if(campaign != null){
 //            UserSearchCriteria usc = new UserSearchCriteria();
 //            usc.queryString = "(mobilePhone: " + phone + ") AND (memberships.groupId: " + campaign.data.get("group") +")";
@@ -109,9 +112,7 @@ public class UserService {
 		/*
 		 * Application currentApplication =
 		 * CampaignService.getCampaignFromName(campaignName); FusionAuthClient
-		 * staticClient = new
-		 * FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-		 * "http://134.209.150.161:9011"); if(currentApplication != null){
+		 * staticClient = getFusionAuthClient(); if(currentApplication != null){
 		 * UserSearchCriteria usc = new UserSearchCriteria(); usc.numberOfResults =
 		 * 10000; usc.queryString = "(memberships.groupId: " +
 		 * currentApplication.data.get("group") + ")"; SearchRequest sr = new
@@ -128,8 +129,7 @@ public class UserService {
 
 	public static List<User> findUsersForGroup(String group) throws Exception {
 
-		FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-				"http://134.209.150.161:9011");
+		FusionAuthClient staticClient = getFusionAuthClient();
 		UserSearchCriteria usc = new UserSearchCriteria();
 		usc.numberOfResults = 10000;
 		usc.queryString = "(memberships.groupId: " + group + ")";
@@ -152,8 +152,7 @@ public class UserService {
 
 		Set<String> userSet = new HashSet<String>();
 		Application currentApplication = campaignService.getCampaignFromNameESamwad(campaignName);
-		FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-				"http://134.209.150.161:9011");
+		FusionAuthClient staticClient = getFusionAuthClient();
 		FusionAuthClient staticClientLogin = new FusionAuthClient("-vjf6we5HJWexNnOgfWfkuNcYzFx_2Y6WYhSWGj3Frg",
 				"http://www.auth.samagra.io:9011");
 		if (currentApplication != null) {
@@ -392,8 +391,7 @@ public class UserService {
 	}
 
 	public static User getInfoForUser(String userID) {
-		FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-				"http://134.209.150.161:9011");
+		FusionAuthClient staticClient = getFusionAuthClient();
 		List<UUID> ids = new ArrayList<>();
 		ids.add(UUID.fromString(userID));
 		ClientResponse<SearchResponse, Errors> cr = staticClient.searchUsers(ids);
@@ -401,8 +399,7 @@ public class UserService {
 	}
 
 	public static User update(User user) {
-		FusionAuthClient staticClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-				"http://134.209.150.161:9011");
+		FusionAuthClient staticClient = getFusionAuthClient();
 		ClientResponse<UserResponse, Errors> userResponse = staticClient.updateUser(user.id,
 				new UserRequest(false, false, user));
 		if (userResponse.wasSuccessful()) {
