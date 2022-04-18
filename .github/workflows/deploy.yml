@@ -48,12 +48,12 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2-
 
-      - name: Delete previous build if present
-        uses: actions/delete-package-versions@v3
-        with: 
-          min-versions-to-keep: 0
-          package-name: 'com.uci.utils'
-          token: ${{ secrets.TOKEN }}
+      # - name: Delete previous build if present
+      #   uses: actions/delete-package-versions@v3
+      #   with: 
+      #     min-versions-to-keep: 0
+      #     package-name: 'com.uci.utils'
+      #     token: ${{ secrets.TOKEN }}
 
       - name: Deploy
         run: mvn clean -DskipTests -Pgithub deploy
