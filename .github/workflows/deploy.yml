@@ -49,14 +49,22 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2-
 
-      - name: Delete previous build if present
-        uses: actions/delete-package-versions@v3
+      # - name: Delete previous build if present
+      #   uses: actions/delete-package-versions@v3
+      #   with:
+      #     num-old-versions-to-delete: 1
+      #     # package-version-ids: '0.0.3'
+      #     # min-versions-to-keep: 1
+      #     package-name: 'com.uci.utils'
+      #     token: ${{ secrets.TOKEN }}
+
+      - uses: actions/github-script@v4
         with:
-          num-old-versions-to-delete: 1
-          # package-version-ids: '0.0.3'
-          # min-versions-to-keep: 1
-          package-name: 'com.uci.utils'
-          token: ${{ secrets.TOKEN }}
+          github-token: ${{secrets.TOKEN}}
+          script: |
+            const { owner, repo } = context.repo
+            const { data: { id } } = await github.repos.getLatestRelease({ owner, repo })
+            await github.repos.deleteRelease({ owner, repo, release_id: id })
 
       - name: Deploy
         run: mvn clean -DskipTests -Pgithub deploy
