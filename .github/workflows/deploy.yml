@@ -58,7 +58,8 @@ jobs:
       #     package-name: 'com.uci.utils'
       #     token: ${{ secrets.TOKEN }}
 
-      - uses: actions/github-script@v4
+      - name: Delete latest version
+        uses: actions/github-script@v4
         with:
           github-token: ${{secrets.TOKEN}}
           script: |
