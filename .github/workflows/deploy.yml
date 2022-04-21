@@ -49,28 +49,10 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2-
 
-      # - name: Delete previous build if present
-      #   uses: actions/delete-package-versions@v3
-      #   with:
-      #     num-old-versions-to-delete: 1
-      #     # package-version-ids: '0.0.3'
-      #     # min-versions-to-keep: 1
-      #     package-name: 'com.uci.utils'
-      #     token: ${{ secrets.TOKEN }}
-
-      # - name: Delete latest version
-      #   uses: actions/github-script@v4
-      #   with:
-      #     github-token: ${{secrets.TOKEN}}
-      #     script: |
-      #       const { owner, repo } = context.repo
-      #       const { data: { id } } = await github.repos.getLatestRelease({ owner, repo })
-      #       await github.repos.deleteRelease({ owner, repo, release_id: id })
-
-      - name: Delete latest version
+      - name: Delete package specific version
         uses: smartsquaregmbh/delete-old-packages@v0.4.0
         with:
-          version: 0.0.3
+          version: 0.0.4
           names: |
             com.uci.utils
           token: ${{ secrets.TOKEN }}
