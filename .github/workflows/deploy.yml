@@ -58,14 +58,23 @@ jobs:
       #     package-name: 'com.uci.utils'
       #     token: ${{ secrets.TOKEN }}
 
+      # - name: Delete latest version
+      #   uses: actions/github-script@v4
+      #   with:
+      #     github-token: ${{secrets.TOKEN}}
+      #     script: |
+      #       const { owner, repo } = context.repo
+      #       const { data: { id } } = await github.repos.getLatestRelease({ owner, repo })
+      #       await github.repos.deleteRelease({ owner, repo, release_id: id })
+
       - name: Delete latest version
-        uses: actions/github-script@v4
+        uses: smartsquaregmbh/delete-old-packages@v0.4.0
         with:
-          github-token: ${{secrets.TOKEN}}
-          script: |
-            const { owner, repo } = context.repo
-            const { data: { id } } = await github.repos.getLatestRelease({ owner, repo })
-            await github.repos.deleteRelease({ owner, repo, release_id: id })
+          version: 0.0.3
+          names: |
+            com.uci.utils
+          token: ${{ secrets.TOKEN }}
+
 
       - name: Deploy
         run: mvn clean -DskipTests -Pgithub deploy
