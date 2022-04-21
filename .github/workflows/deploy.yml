@@ -1,8 +1,9 @@
 name: Build & Deploy on Tag
-on:
-  push:
-    tags:
-      - 'v*.*.*'
+# on:
+#   push:
+#     tags:
+#       - 'v*.*.*'
+on: [push, pull_request]
 jobs:
   build:
     name: Build
