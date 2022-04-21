@@ -51,7 +51,8 @@ jobs:
       - name: Delete previous build if present
         uses: actions/delete-package-versions@v3
         with:
-          package-version-ids: '0.0.3'
+          num-old-versions-to-delete: 1
+          # package-version-ids: '0.0.3'
           # min-versions-to-keep: 1
           package-name: 'com.uci.utils'
           token: ${{ secrets.TOKEN }}
