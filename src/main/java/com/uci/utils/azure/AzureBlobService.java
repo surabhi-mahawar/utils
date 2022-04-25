@@ -248,7 +248,7 @@ public class AzureBlobService {
 				
 				// Get a reference to a blob
 				BlobClient blobClient = containerClient.getBlobClient(name);
-				
+				log.info("yash file path : " + filePath);
 				blobClient.uploadFromFile(filePath);
 				
 				temp.delete();
