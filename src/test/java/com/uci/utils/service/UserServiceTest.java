@@ -53,7 +53,7 @@ class UserServiceTest {
     // this method is being used in transformer (internal bot)
     void findByEmail() {
         String email = "example@gmail.com";
-        User result = UserService.findByEmail(email);
+        User result = userService.findByEmail(email);
         // result is coming null
         System.out.println(result + "");
     }
@@ -65,18 +65,18 @@ class UserServiceTest {
         application.data.put("group", new ArrayList<String>());
         Mockito.when(campaignService.getCampaignFromNameESamwad(anyString())).thenReturn(application);
 
-        String campaignName = "UCI";
+        String campaignName = "Test 4/11";
         List<String> result = userService.findUsersForESamwad(campaignName);
 
         assertNotNull(result);
     }
 
 
-//    @Test
-//    void getUsersFromFederatedServers() {
-//        String campaignID = "";
-//        userService.getUsersFromFederatedServers(campaignID);
-//    }
+    @Test
+    void getUsersFromFederatedServers() {
+        String campaignID = "TestConstraintBot";
+        userService.getUsersFromFederatedServers(campaignID);
+    }
 //
 //    @Test
 //    void getUsersMessageByTemplate() {
@@ -89,7 +89,7 @@ class UserServiceTest {
         User user = new User();
         String value = "someValue";
         user.data.put("programConstruct", value);
-        String result = UserService.getProgramConstruct(user);
+        String result = userService.getProgramConstruct(user);
         assertEquals(result, value);
     }
 
@@ -103,7 +103,7 @@ class UserServiceTest {
     void isAssociate() {
         User user = new User();
         user.data.put("role", "Program Associate");
-        Boolean result = UserService.isAssociate(user);
+        Boolean result = userService.isAssociate(user);
         assertTrue(result);
     }
 

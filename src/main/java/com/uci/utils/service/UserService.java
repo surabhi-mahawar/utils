@@ -45,14 +45,26 @@ public class UserService {
 	
 	@Value("${template.service.base.url:#{''}}")
 	private String baseUrlTemplate;
-	
-//    @Autowired
+
+	@Value("${fusionauth.key}")
+	private String fusionAuthKey;
+
+	@Value("${fusionauth.url}")
+	private String fusionAuthUrl;
+
+	private FusionAuthClient fusionAuthClient;
+
+	//    @Autowired
 //    @Value("${external.services.url-shortnr.baseURL}")
 	private static String shortnrBaseURL = "http://localhost:9999";
 
-	public static User findByEmail(String email) {
-		FusionAuthClient staticClient = getFusionAuthClient();
-		ClientResponse<UserResponse, Errors> response = staticClient.retrieveUserByEmail(email);
+	@Value("${fusionauth.key}")
+	protected void setFusionAuthClient( String key, @Value("${fusionauth.url}") String url){
+		fusionAuthClient = new FusionAuthClient(key, url);
+	}
+
+	public User findByEmail(String email) {
+		ClientResponse<UserResponse, Errors> response = fusionAuthClient.retrieveUserByEmail(email);
 		if (response.wasSuccessful()) {
 			return response.successResponse.user;
 		} else if (response.errorResponse != null) {
@@ -65,18 +77,14 @@ public class UserService {
 		return null;
 	}
 
-	protected static FusionAuthClient getFusionAuthClient() {
-		return new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc",
-				"http://134.209.150.161:9011");
-	}
 
-	public static User findByPhone(String phone) {
-		FusionAuthClient staticClient = getFusionAuthClient();
+
+	public User findByPhone(String phone) {
 		UserSearchCriteria usc = new UserSearchCriteria();
 		usc.queryString = "*" + phone + "*";
 		usc.numberOfResults = 100;
 		SearchRequest sr = new SearchRequest(usc);
-		ClientResponse<SearchResponse, Errors> cr = staticClient.searchUsersByQueryString(sr);
+		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searchUsersByQueryString(sr);
 		if (cr.wasSuccessful()) {
 			return cr.successResponse.users.get(0);
 		} else if (cr.exception != null) {
@@ -87,7 +95,7 @@ public class UserService {
 		return null;
 	}
 
-	public static User findByPhoneAndCampaign(String phone, JsonNode campaign) {
+	public User findByPhoneAndCampaign(String phone, JsonNode campaign) {
 //        FusionAuthClient staticClient = getFusionAuthClient();
 //        if(campaign != null){
 //            UserSearchCriteria usc = new UserSearchCriteria();
@@ -106,7 +114,7 @@ public class UserService {
 		return null;
 	}
 
-	public static List<User> findUsersForCampaign(String campaignName) throws Exception {
+	public List<User> findUsersForCampaign(String campaignName) throws Exception {
 
 		// Fixme: Important
 		/*
@@ -127,14 +135,13 @@ public class UserService {
 		return new ArrayList<>();
 	}
 
-	public static List<User> findUsersForGroup(String group) throws Exception {
+	public List<User> findUsersForGroup(String group) throws Exception {
 
-		FusionAuthClient staticClient = getFusionAuthClient();
 		UserSearchCriteria usc = new UserSearchCriteria();
 		usc.numberOfResults = 10000;
 		usc.queryString = "(memberships.groupId: " + group + ")";
 		SearchRequest sr = new SearchRequest(usc);
-		ClientResponse<SearchResponse, Errors> cr = staticClient.searchUsersByQueryString(sr);
+		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searchUsersByQueryString(sr);
 
 		if (cr.wasSuccessful()) {
 			return cr.successResponse.users;
@@ -152,9 +159,7 @@ public class UserService {
 
 		Set<String> userSet = new HashSet<String>();
 		Application currentApplication = campaignService.getCampaignFromNameESamwad(campaignName);
-		FusionAuthClient staticClient = getFusionAuthClient();
-		FusionAuthClient staticClientLogin = new FusionAuthClient("-vjf6we5HJWexNnOgfWfkuNcYzFx_2Y6WYhSWGj3Frg",
-				"http://www.auth.samagra.io:9011");
+		FusionAuthClient clientLogin = new FusionAuthClient(fusionAuthKey, fusionAuthUrl);
 		if (currentApplication != null) {
 			// TODO: Step 1 => Get groups for application
 			ArrayList<String> groups = (ArrayList<String>) currentApplication.data.get("group");
@@ -164,7 +169,7 @@ public class UserService {
 			loginRequest.loginId = "samarth-admin";
 			loginRequest.password = "abcd1234";
 			loginRequest.applicationId = UUID.fromString("f0ddb3f6-091b-45e4-8c0f-889f89d4f5da");
-			ClientResponse<LoginResponse, Errors> loginResponse = staticClientLogin.login(loginRequest);
+			ClientResponse<LoginResponse, Errors> loginResponse = clientLogin.login(loginRequest);
 
 			if (loginResponse.wasSuccessful()) {
 
@@ -172,7 +177,7 @@ public class UserService {
 
 				// TODO: Step 4 => Iterate over all filters to get phone number data
 				for (String group : groups) {
-					ClientResponse<GroupResponse, Errors> groupResponse = staticClient
+					ClientResponse<GroupResponse, Errors> groupResponse = fusionAuthClient
 							.retrieveGroup(UUID.fromString(group));
 					if (groupResponse.wasSuccessful()) {
 						String filter = new ObjectMapper()
@@ -207,7 +212,7 @@ public class UserService {
 		return userPhoneNumbers;
 	}
 
-	private static ArrayList<String> JSONArrayToList(JSONArray userPhonesResponse) {
+	private ArrayList<String> JSONArrayToList(JSONArray userPhonesResponse) {
 		ArrayList<String> usersList = new ArrayList<String>();
 		if (userPhonesResponse != null) {
 			for (int i = 0; i < userPhonesResponse.length(); i++) {
@@ -323,7 +328,7 @@ public class UserService {
 	/*
 	 * Get the manager for a specific user
 	 */
-	public static User getManager(User applicant) {
+	public User getManager(User applicant) {
 		try {
 			String managerName = (String) applicant.data.get("reportingManager");
 			User u = getUserByFullName(managerName, "SamagraBot");
@@ -338,7 +343,7 @@ public class UserService {
 	/*
 	 * Get the programCoordinator for a specific user
 	 */
-	public static User getProgramCoordinator(User applicant) {
+	public User getProgramCoordinator(User applicant) {
 		try {
 			String managerName = (String) applicant.data.get("programCoordinator");
 			User u = getUserByFullName(managerName, "SamagraBot");
@@ -353,7 +358,7 @@ public class UserService {
 	/*
 	 * Get the programConstruct for a specific user
 	 */
-	public static String getProgramConstruct(User applicant) {
+	public String getProgramConstruct(User applicant) {
 		try {
 			String programConstruct = String.valueOf(applicant.data.get("programConstruct"));
 			if (programConstruct != null)
@@ -368,7 +373,7 @@ public class UserService {
 	/*
 	 * Get the manager for a specific user
 	 */
-	public static User getEngagementOwner(User applicant) {
+	public User getEngagementOwner(User applicant) {
 		try {
 			String engagementOwnerName = (String) applicant.data.get("programOwner");
 			User u = getUserByFullName(engagementOwnerName, "SamagraBot");
@@ -381,7 +386,7 @@ public class UserService {
 	}
 
 	@Nullable
-	public static User getUserByFullName(String fullName, String campaignName) throws Exception {
+	public User getUserByFullName(String fullName, String campaignName) throws Exception {
 		List<User> allUsers = findUsersForCampaign(campaignName);
 		for (User u : allUsers) {
 			if (u.fullName.equals(fullName))
@@ -390,17 +395,15 @@ public class UserService {
 		return null;
 	}
 
-	public static User getInfoForUser(String userID) {
-		FusionAuthClient staticClient = getFusionAuthClient();
+	public User getInfoForUser(String userID) {
 		List<UUID> ids = new ArrayList<>();
 		ids.add(UUID.fromString(userID));
-		ClientResponse<SearchResponse, Errors> cr = staticClient.searchUsers(ids);
+		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searchUsers(ids);
 		return cr.successResponse.users.get(0);
 	}
 
-	public static User update(User user) {
-		FusionAuthClient staticClient = getFusionAuthClient();
-		ClientResponse<UserResponse, Errors> userResponse = staticClient.updateUser(user.id,
+	public User update(User user) {
+		ClientResponse<UserResponse, Errors> userResponse = fusionAuthClient.updateUser(user.id,
 				new UserRequest(false, false, user));
 		if (userResponse.wasSuccessful()) {
 			return userResponse.successResponse.user;
@@ -408,7 +411,7 @@ public class UserService {
 		return null;
 	}
 
-	public static Boolean isAssociate(User applicant) {
+	public Boolean isAssociate(User applicant) {
 		try {
 			String role = (String) applicant.data.get("role");
 			if (role.equals("Program Associate"))
@@ -419,7 +422,7 @@ public class UserService {
 		}
 	}
 
-	public static Boolean isCoordinator(User applicant) {
+	public Boolean isCoordinator(User applicant) {
 		try {
 			String role = (String) applicant.data.get("role");
 			if (role.equals("Program Coordinator"))
