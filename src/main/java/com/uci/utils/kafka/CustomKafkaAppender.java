@@ -149,7 +149,7 @@ public final class CustomKafkaAppender extends AbstractAppender {
 	@Override
 	public void start() {
 		super.start();
-		manager.startup();
+//		manager.startup();
 	}
 
 	@Override
