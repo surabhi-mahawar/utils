@@ -108,7 +108,7 @@ public class RedisCacheService {
      * @param name
      * @return
      */
-    private Object getCache(String prefix, String key) {
+    public Object getCache(String prefix, String key) {
     	ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
         Object result = valOperations.get(redisKeyWithPrefix(prefix, key));
         log.info("Find redis cache by key: "+redisKeyWithPrefix(prefix, key));
@@ -121,7 +121,7 @@ public class RedisCacheService {
      * @param name
      * @param value
      */
-    private void setCache(String prefix, String key, Object value) {
+    public void setCache(String prefix, String key, Object value) {
     	log.info("Set redis cache for key: "+redisKeyWithPrefix(prefix, key));
     	ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
         try {
