@@ -72,11 +72,11 @@ class UserServiceTest {
     }
 
 
-    @Test
-    void getUsersFromFederatedServers() {
-        String campaignID = "TestConstraintBot";
-        userService.getUsersFromFederatedServers(campaignID);
-    }
+//    @Test
+//    void getUsersFromFederatedServers() {
+//        String campaignID = "TestConstraintBot";
+//        userService.getUsersFromFederatedServers(campaignID);
+//    }
 //
 //    @Test
 //    void getUsersMessageByTemplate() {
