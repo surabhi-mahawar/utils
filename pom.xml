@@ -11,7 +11,9 @@
 	</parent>
 	<groupId>com.uci</groupId>
 	<artifactId>utils</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.3</version>
+	<!-- On changing, Set version in deploy.xml to delete the previous packages if exists and deploy new package for the specified version -->
+
 	<name>utils</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
@@ -19,6 +21,24 @@
 		<mockwebserver.version>4.7.2</mockwebserver.version>
 		<okhttp3.version>4.7.2</okhttp3.version>
 	</properties>
+	<profiles>
+		<profile>
+			<id>github</id>
+			<activation>
+				<property>
+					<name>useGitHubPackages</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<distributionManagement>
+				<repository>
+					<id>github</id>
+					<name>GitHub Packages</name>
+					<url>https://maven.pkg.github.com/samagra-comms/utils</url>
+				</repository>
+			</distributionManagement>
+		</profile>
+	</profiles>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

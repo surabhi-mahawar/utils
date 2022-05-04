@@ -1,10 +1,6 @@
 package com.uci.utils.azure;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -15,6 +11,8 @@ import java.time.OffsetDateTime;
 import java.util.Random;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -165,7 +163,7 @@ public class AzureBlobService {
 	 * 
 	 * @param urlStr
 	 */
-	public String uploadFile(String urlStr, String mimeType, String name) {
+	public String uploadFile(String urlStr, String mimeType, String name, Double maxSizeForMedia) {
 		try {
 			if(this.containerClient != null) {
 				/* Find File Name */
@@ -182,8 +180,14 @@ public class AzureBlobService {
 	
 				/* File input stream to copy from */
 				URL url = new URL(urlStr);
-				InputStream in = url.openStream();
-	
+				byte[] inputBytes = url.openStream().readAllBytes();
+
+				/* Discard if file size is greater than MAX_SIZE_FOR_MEDIA */
+				if(maxSizeForMedia != null && inputBytes.length > maxSizeForMedia){
+					log.info("file size is greater than limit : " + inputBytes.length);
+					return "";
+				}
+
 				/* Create temp file to copy to */
 				String localPath = "/tmp/";
 				String filePath = localPath + name;
@@ -191,7 +195,7 @@ public class AzureBlobService {
 				temp.createNewFile();
 	
 				// Copy file from url to temp file
-				Files.copy(in, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+				Files.copy(new ByteArrayInputStream(inputBytes), Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
 	
 				// Get a reference to a blob
 				BlobClient blobClient = containerClient.getBlobClient(name);
@@ -244,7 +248,7 @@ public class AzureBlobService {
 				
 				// Get a reference to a blob
 				BlobClient blobClient = containerClient.getBlobClient(name);
-				
+				log.info("yash file path : " + filePath);
 				blobClient.uploadFromFile(filePath);
 				
 				temp.delete();
