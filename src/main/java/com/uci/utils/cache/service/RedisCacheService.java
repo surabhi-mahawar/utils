@@ -18,10 +18,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RedisCacheService {
 	private RedisTemplate<String, Object> redisTemplate;
+
+    /**
+     * Get is redis cache enabled or disabled
+     * @return
+     */
+    private Boolean enabledRedis() {
+        if(System.getenv("REDIS_ENABLED") != null && System.getenv("REDIS_ENABLED").equalsIgnoreCase("false")) {
+            return false;
+        }
+        return true;
+    }
 	
 	/**
-     * Get XMessageDao Object from cache by name
-     * @param name
+     * Get XMessageDao Object from cache by key
+     * @param key
      * @return
      */
     public Object getMinioCDNCache(String key) {
@@ -29,8 +40,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Set XMessageDao Object in cache by name
-     * @param name
+     * Set XMessageDao Object in cache by key
+     * @param key
      * @param value
      */
     public void setMinioCDNCache(String key, Object value) {
@@ -38,8 +49,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Get Fusion Auth User ID Object from cache by name
-     * @param name
+     * Get Fusion Auth User ID Object from cache by key
+     * @param key
      * @return
      */
     public Object getFAUserIDForAppCache(String key) {
@@ -47,8 +58,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Set Fusion Auth User ID Object in cache by name
-     * @param name
+     * Set Fusion Auth User ID Object in cache by key
+     * @param key
      * @param value
      */
     public void setFAUserIDForAppCache(String key, Object value) {
@@ -56,8 +67,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Delete Fusion Auth User ID Object in cache by name
-     * @param name
+     * Delete Fusion Auth User ID Object in cache by key
+     * @param key
      */
     public void deleteFAUserIDForAppCache(String key) {
         deleteCache("FAUserID", key);
@@ -90,8 +101,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Get XMessageDao Object from cache by name
-     * @param name
+     * Get XMessageDao Object from cache by key
+     * @param key
      * @return
      */
     public Object getXMessageDaoCache(String key) {
@@ -99,8 +110,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Set XMessageDao Object in cache by name
-     * @param name
+     * Set XMessageDao Object in cache by key
+     * @param key
      * @param value
      */
     public void setXMessageDaoCache(String key, Object value) {
@@ -108,8 +119,8 @@ public class RedisCacheService {
     }
     
     /**
-     * Delete XMessageDao Object in cache by name
-     * @param name
+     * Delete XMessageDao Object in cache by key
+     * @param key
      */
     public void deleteXMessageDaoCache(String key) {
         deleteCache("XMessageDAO", key);
@@ -129,56 +140,62 @@ public class RedisCacheService {
     
 
     /**
-     * Get cache by key & name
+     * Get cache by prefix & key
+     * @param prefix
      * @param key
-     * @param name
      * @return
      */
     private Object getCache(String prefix, String key) {
-    	ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
-        Object result = valOperations.get(redisKeyWithPrefix(prefix, key));
-        log.info("Find redis cache by key: "+redisKeyWithPrefix(prefix, key));
-    	return result;
+    	if(enabledRedis()) {
+            ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
+            Object result = valOperations.get(redisKeyWithPrefix(prefix, key));
+            log.info("Find redis cache by key: "+redisKeyWithPrefix(prefix, key));
+            return result;
+        }
+        return null;
     }
     
     /**
-     * Set cache value by key & name
+     * Set cache value by prefix & key
+     * @param prefix
      * @param key
-     * @param name
      * @param value
      */
     private void setCache(String prefix, String key, Object value) {
-    	log.info("Set redis cache for key: "+redisKeyWithPrefix(prefix, key));
-    	ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
-        try {
-        	valOperations.set(redisKeyWithPrefix(prefix, key), value);
-        } catch (Exception e) {
-        	/* If redis cache not able to set, delete cache */
-        	redisTemplate.delete(redisKeyWithPrefix(prefix, key));
-        	e.printStackTrace();
-        	
-        	log.info("Exception in redis setCache: "+e.getMessage());
+        if (enabledRedis()) {
+            log.info("Set redis cache for key: " + redisKeyWithPrefix(prefix, key));
+            ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
+            try {
+                valOperations.set(redisKeyWithPrefix(prefix, key), value);
+            } catch (Exception e) {
+                /* If redis cache not able to set, delete cache */
+                redisTemplate.delete(redisKeyWithPrefix(prefix, key));
+                e.printStackTrace();
+
+                log.info("Exception in redis setCache: " + e.getMessage());
+            }
         }
     }
-    
+
     /**
-     * Set cache value by key & name
+     * Set cache value by prefix & key
+     * @param prefix
      * @param key
-     * @param name
-     * @param value
      */
     public void deleteCache(String prefix, String key) {
-        log.info("Delete redis cache for key: "+redisKeyWithPrefix(prefix, key));
-        ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
-        try {
-        	redisTemplate.delete(redisKeyWithPrefix(prefix, key));
-        } catch (Exception e) {
-            log.info("Exception in redis deleteCache: "+e.getMessage());
+        if (enabledRedis()) {
+            log.info("Delete redis cache for key: " + redisKeyWithPrefix(prefix, key));
+            ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
+            try {
+                redisTemplate.delete(redisKeyWithPrefix(prefix, key));
+            } catch (Exception e) {
+                log.info("Exception in redis deleteCache: " + e.getMessage());
+            }
         }
     }
     
     /**
-     * Add env prefix with cache key & name
+     * Add env prefix with cache key
      * @param key
      * @return
      */
