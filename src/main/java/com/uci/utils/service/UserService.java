@@ -256,7 +256,7 @@ public class UserService {
 		try {
 			Response response = client.newCall(request).execute();
 			return (new JSONObject(response.body().string())).getJSONObject("result").getJSONArray("data");
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
