@@ -1,21 +1,19 @@
 package com.uci.utils.cdn.samagra;
 
 import java.io.IOException;
+import java.net.URI;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
+import okhttp3.*;
 import org.json.JSONObject;
 import org.json.XML;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,8 +21,6 @@ import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.cache.service.RedisCacheService;
 
-import io.fusionauth.client.FusionAuthClient;
-import io.fusionauth.domain.api.LoginRequest;
 import io.fusionauth.domain.api.LoginResponse;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
@@ -40,7 +36,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Mono;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @SuppressWarnings("ALL")
 @Service
@@ -96,7 +93,7 @@ public class MinioClientService {
 	 */
 	private MinioClient getMinioClient() {
 		try {
-			StaticProvider provider = getMinioCredentialsProvider();
+			StaticProvider provider = getMinioCredentialsProvider(true);
 			log.info("provider: "+provider+", url: "+minioClientProp.cdnBaseUrl);
 			if(provider != null) {
 				return MinioClient.builder()
@@ -105,7 +102,19 @@ public class MinioClientService {
 						.build();
 			}
 		} catch(Exception e) {
-			log.error("Exception in getMinioClient: "+e.getMessage());
+			log.error("Exception in getMinioClient with cache: "+e.getMessage());
+			try {
+				StaticProvider provider = getMinioCredentialsProvider(false);
+				log.info("provider: "+provider+", url: "+minioClientProp.cdnBaseUrl);
+				if(provider != null) {
+					return MinioClient.builder()
+							.endpoint(minioClientProp.cdnBaseUrl)
+							.credentialsProvider(provider)
+							.build();
+				}
+			} catch(Exception ex) {
+				log.error("Exception in getMinioClient without cache: "+e.getMessage());
+			}
 		}
 		return null;
 	}
@@ -114,52 +123,70 @@ public class MinioClientService {
 	 * Get Credentials Provider for Minio Client
 	 * @return
 	 */
-	private StaticProvider getMinioCredentialsProvider() {
+	private StaticProvider getMinioCredentialsProvider(Boolean getFromCache) {
 		try {
+			/* Get credentials in cache */
+			if(getFromCache) {
+				Map<String, String> cacheData = getMinioCredentialsCache();
+				if(cacheData.get("sessionToken") != null && cacheData.get("accessKey") != null && cacheData.get("secretAccessKey") != null) {
+					return new StaticProvider(cacheData.get("accessKey"), cacheData.get("secretAccessKey"), cacheData.get("sessionToken"));
+				}
+			}
+
 			String token = getFusionAuthToken();
 			log.info("token: "+token);
 			if(!token.isEmpty()) {
-				WebClient client = WebClient.builder()
-						.baseUrl(minioClientProp.cdnBaseUrl)
-		                .build();
-//				Integer duration = (minioClientProp.credentialsExpiry)*60*60;
 				Integer duration = 36000;
-				String response = client.post().uri(builder -> builder.path(minioClientProp.bucketId)
-											.queryParam("Action", "AssumeRoleWithWebIdentity")
-											.queryParam("DurationSeconds", 36000) //duration: 10 Hours
-											.queryParam("WebIdentityToken", token)
-											.queryParam("Version", "2011-06-15")
-											.build())
-					.exchange()
-                    .block()
-                    .bodyToMono(String.class)
-                    .block();
-				
-				JSONObject xmlJSONObj = XML.toJSONObject(response);
-		        String jsonPrettyPrintString = xmlJSONObj.toString(4);
-		        
-		        ObjectMapper mapper = new ObjectMapper();
-		        JsonNode node = mapper.readTree(jsonPrettyPrintString);
-		        JsonNode credentials = node.path("AssumeRoleWithWebIdentityResponse").path("AssumeRoleWithWebIdentityResult").path("Credentials");
-		        if(credentials != null && credentials.get("SessionToken") != null 
-		        		&& credentials.get("AccessKeyId") != null && credentials.get("SecretAccessKey") != null) {
-		        	String sessionToken = credentials.get("SessionToken").asText();
-					String accessKey = credentials.get("AccessKeyId").asText();
-					String secretAccessKey = credentials.get("SecretAccessKey").asText();
-					
-					log.info("sessionToken: "+sessionToken+", accessKey: "+accessKey+",secretAccessKey: "+secretAccessKey);
-					
-					if(!accessKey.isEmpty() && !secretAccessKey.isEmpty() && !sessionToken.isEmpty()) {
-						return new StaticProvider(accessKey, secretAccessKey, sessionToken);
-//						return new StaticProvider("test", secretAccessKey, sessionToken);
+				OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
+						.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
+				MediaType mediaType = MediaType.parse("application/json");
+
+				UriComponents builder = UriComponentsBuilder.fromHttpUrl(minioClientProp.cdnBaseUrl)
+						.queryParam("Action", "AssumeRoleWithWebIdentity")
+						.queryParam("DurationSeconds", 36000) //duration: 10 Hours
+						.queryParam("WebIdentityToken", token)
+						.queryParam("Version", "2011-06-15")
+						.build();
+				URI expanded = URI.create(builder.toUriString());
+				RequestBody body = RequestBody.create(mediaType, "");
+				Request request = new Request.Builder().url(expanded.toString()).method("POST", body)
+						.addHeader("Content-Type", "application/json").build();
+
+				try {
+					Response callResponse = client.newCall(request).execute();
+					String response = callResponse.body().string();
+
+					JSONObject xmlJSONObj = XML.toJSONObject(response);
+					String jsonPrettyPrintString = xmlJSONObj.toString(4);
+
+					ObjectMapper mapper = new ObjectMapper();
+					JsonNode node = mapper.readTree(jsonPrettyPrintString);
+					JsonNode credentials = node.path("AssumeRoleWithWebIdentityResponse").path("AssumeRoleWithWebIdentityResult").path("Credentials");
+					if(credentials != null && credentials.get("SessionToken") != null
+							&& credentials.get("AccessKeyId") != null && credentials.get("SecretAccessKey") != null) {
+						String sessionToken = credentials.get("SessionToken").asText();
+						String accessKey = credentials.get("AccessKeyId").asText();
+						String secretAccessKey = credentials.get("SecretAccessKey").asText();
+
+						log.info("sessionToken: "+sessionToken+", accessKey: "+accessKey+",secretAccessKey: "+secretAccessKey);
+
+						if(!accessKey.isEmpty() && !secretAccessKey.isEmpty() && !sessionToken.isEmpty()) {
+							/* Set credentials in cache */
+							setMinioCredentialsCache(sessionToken, accessKey, secretAccessKey);
+
+							return new StaticProvider(accessKey, secretAccessKey, sessionToken);
+	//						return new StaticProvider("test", secretAccessKey, sessionToken);
+						}
+					} else {
+						if(node.path("ErrorResponse") != null
+								&& node.path("ErrorResponse").path("Error") != null
+								&& node.path("ErrorResponse").path("Error").path("Message") != null) {
+							log.error("Error when getting credentials for minio client: "+node.path("ErrorResponse").path("Error").path("Message").asText());
+						}
 					}
-		        } else {
-		        	if(node.path("ErrorResponse") != null 
-		        			&& node.path("ErrorResponse").path("Error") != null 
-		        			&& node.path("ErrorResponse").path("Error").path("Message") != null) {
-		        		log.error("Error when getting credentials for minio client: "+node.path("ErrorResponse").path("Error").path("Message").asText());
-		        	}
-		        }
+				} catch (IOException e) {
+					log.error("IOException in getMinioCredentialsProvider for request call: "+e.getMessage());
+				}
 			}  
 		} catch (Exception e) {
 			log.error("Exception in getMinioCredentialsProvider: "+e.getMessage());
@@ -174,15 +201,11 @@ public class MinioClientService {
 	 * @param secretAccessKey
 	 */
 	private void setMinioCredentialsCache(String sessionToken, String accessKey, String secretAccessKey) {
-//		Integer duration = (minioClientProp.credentialsExpiry-1)*60*60;
-		Integer duration = 23*60*60;
-		
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     	
 		/* local date time */
-    	LocalDateTime localNow = LocalDateTime.now();
-    	LocalDateTime expiry = localNow.plusSeconds(duration);
-    	String expiryDateString = fmt.format(expiry).toString();
+    	LocalDateTime localTomorrow = LocalDateTime.now().plusDays(1);
+    	String expiryDateString = fmt.format(localTomorrow).toString();
     	
 		redisCacheService.setMinioCDNCache("sessionToken", sessionToken);
 		redisCacheService.setMinioCDNCache("accessKey", accessKey);
@@ -197,32 +220,25 @@ public class MinioClientService {
 	 * @param secretAccessKey
 	 * @return
 	 */
-	private Map<String, String> getMinioCredentialsCache(String sessionToken, String accessKey, String secretAccessKey) {
+	private Map<String, String> getMinioCredentialsCache() {
 		Map<String, String> credentials = new HashMap();
 		
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     	
 		/* local date time */
     	LocalDateTime localNow = LocalDateTime.now();
-    	String dateString = fmt.format(localNow).toString();
-    	LocalDateTime localDateTime = LocalDateTime.parse(dateString, fmt);
-    	
+		/* Expiry Date time */
 		String expiry = (String) redisCacheService.getMinioCDNCache("expiresAt");
+		LocalDateTime expiryDateTime = LocalDateTime.parse(expiry, fmt);
 		
-		LocalDateTime expiryDateTime = LocalDateTime.parse(dateString, fmt);
-		
-		if(localDateTime.compareTo(expiryDateTime) < 0) {
+		if(localNow.compareTo(expiryDateTime) < 0) {
 			credentials.put("sessionToken", (String) redisCacheService.getMinioCDNCache("sessionToken"));
 			credentials.put("accessKey", (String) redisCacheService.getMinioCDNCache("accessKey"));
 			credentials.put("secretAccessKey", (String) redisCacheService.getMinioCDNCache("secretAccessKey"));
 		}
 		return credentials;
 	}
-	
-//	private StaticProvider getMinioClientProvider1() {
-//		
-//	}
-	
+
 	/**
 	 * Get Fustion Auth Token
 	 * @return
