@@ -1,15 +1,28 @@
 package com.uci.utils.cdn.samagra;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import com.uci.utils.bot.util.FileUtil;
+import com.uci.utils.cdn.FileCdnProvider;
+import io.minio.UploadObjectArgs;
 import okhttp3.*;
 import org.json.JSONObject;
 import org.json.XML;
@@ -36,6 +49,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -45,75 +59,151 @@ import org.springframework.web.util.UriComponentsBuilder;
 @AllArgsConstructor
 @Getter
 @Setter
-public class MinioClientService {
+public class MinioClientService implements FileCdnProvider {
 	private MinioClientProp minioClientProp;
 	private RedisCacheService redisCacheService;
+
+	/**
+	 * Get File Signed URL
+	 * @param name
+	 * @return
+	 */
+	public String getFileSignedUrl(String name) {
+		String url = "";
+		try {
+			MinioClient minioClient = getMinioClient();
+			if(minioClient != null) {
+				try {
+					url = minioClient.getPresignedObjectUrl(
+							GetPresignedObjectUrlArgs.builder()
+									.method(Method.GET)
+									.bucket(minioClientProp.bucketId)
+									.object(name)
+									.expiry(1, TimeUnit.DAYS)
+									.build()
+					);
+				} catch (InvalidKeyException | InsufficientDataException | InternalException
+						| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
+						| IllegalArgumentException | IOException e) {
+					// TODO Auto-generated catch block
+					log.error("Exception in getCdnSignedUrl: "+e.getMessage());
+				} catch (ErrorResponseException e1) {
+					log.error("Exception in getFileSignedUrl: "+e1.getMessage()+", name: "+e1.getClass());
+				}
+			}
+			log.info("minioClient url: "+url);
+		} catch (Exception ex) {
+			log.error("Exception in getFileSignedUrl: "+ex.getMessage());
+		}
+
+		return url;
+	}
+
+	public String uploadFile(String urlStr, String mimeType, String name, Double maxSizeForMedia) {
+		try {
+			MinioClient minioClient = getMinioClient();
+			if(minioClient != null) {
+				try {
+					/* Find File Name */
+					Path path = new File(urlStr).toPath();
+					String ext = FileUtil.getFileTypeByMimeSubTypeString(MimeTypeUtils.parseMimeType(mimeType).getSubtype());
+
+					Random rand = new Random();
+					if(name == null || name.isEmpty()) {
+						name = UUID.randomUUID().toString();
+					}
+					name += "." + ext;
+
+					log.info("Minio CDN File Name :" + name);
+
+					/* File input stream to copy from */
+					URL url = new URL(urlStr);
+					byte[] inputBytes = url.openStream().readAllBytes();
+
+					/* Discard if file size is greater than MAX_SIZE_FOR_MEDIA */
+					if(maxSizeForMedia != null && inputBytes.length > maxSizeForMedia){
+						log.info("file size is greater than limit : " + inputBytes.length);
+						return "";
+					}
+
+					/* Create temp file to copy to */
+					String localPath = "/tmp/";
+					String filePath = localPath + name;
+					File temp = new File(filePath);
+					temp.createNewFile();
+
+					// Copy file from url to temp file
+					Files.copy(new ByteArrayInputStream(inputBytes), Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+
+					minioClient.uploadObject(
+							UploadObjectArgs.builder()
+									.bucket(minioClientProp.bucketId)
+									.object(name)
+									.filename(filePath)
+									.build());
+
+					// Delete temp file
+					temp.delete();
+
+					return name;
+				} catch (InvalidKeyException | InsufficientDataException | InternalException
+						| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
+						| IllegalArgumentException | IOException e) {
+					// TODO Auto-generated catch block
+					log.error("Exception in getCdnSignedUrl: "+e.getMessage());
+				} catch (ErrorResponseException e1) {
+					log.error("Exception in getFileSignedUrl: "+e1.getMessage()+", name: "+e1.getClass());
+				}
+			}
+		} catch (Exception ex) {
+			log.error("Exception in getFileSignedUrl: "+ex.getMessage());
+		}
+
+		return "";
+	}
+
+	public String uploadFileFromInputStream(InputStream binary, String mimeType, String name) {
+		return "";
+	}
 	
 	/**
 	 * Get Signed URL of CDN for given media file name
 	 * @param mediaName
 	 * @return
 	 */
-	public String getCdnSignedUrl(String mediaName) {
-		String url = "";
-		try {
-			if(minioClientProp != null) {
-				MinioClient minioClient = getMinioClient();
-				log.info("minioClient: "+minioClient);
-		        if(minioClient != null) {
-					try {
-						url = minioClient.getPresignedObjectUrl(
-			                GetPresignedObjectUrlArgs.builder()
-			                    .method(Method.GET)
-			                    .bucket(minioClientProp.bucketId)
-			                    .object(mediaName)
-			                    .expiry(1, TimeUnit.DAYS)
-			                    .build());
-					} catch (InvalidKeyException | InsufficientDataException | InternalException
-							| InvalidResponseException | NoSuchAlgorithmException | XmlParserException | ServerException
-							| IllegalArgumentException | IOException e) {
-						// TODO Auto-generated catch block
-						log.error("Exception in getCdnSignedUrl: "+e.getMessage());
-					} catch (ErrorResponseException e1) {
-						log.error("Exception in getCdnSignedUrl: "+e1.getMessage()+", name: "+e1.getClass());
-					}
-		        }
-		        log.info("minioClient url: "+url);
-			}
-		} catch (Exception ex) {
-			log.error("Exception in getCdnSignedUrl: "+ex.getMessage());
-		}
-		
-        return url;
+	public String getCdnSignedUrl(String name) {
+		return getFileSignedUrl(name);
     }
-	
+
 	/**
 	 * Get Minio Client
 	 * @return
 	 */
 	private MinioClient getMinioClient() {
-		try {
-			StaticProvider provider = getMinioCredentialsProvider(true);
-			log.info("provider: "+provider+", url: "+minioClientProp.cdnBaseUrl);
-			if(provider != null) {
-				return MinioClient.builder()
-						.endpoint(minioClientProp.cdnBaseUrl)
-						.credentialsProvider(provider)
-						.build();
-			}
-		} catch(Exception e) {
-			log.error("Exception in getMinioClient with cache: "+e.getMessage());
+		if(minioClientProp != null) {
 			try {
-				StaticProvider provider = getMinioCredentialsProvider(false);
-				log.info("provider: "+provider+", url: "+minioClientProp.cdnBaseUrl);
-				if(provider != null) {
+				StaticProvider provider = getMinioCredentialsProvider(true);
+				log.info("provider: " + provider + ", url: " + minioClientProp.cdnBaseUrl);
+				if (provider != null) {
 					return MinioClient.builder()
 							.endpoint(minioClientProp.cdnBaseUrl)
 							.credentialsProvider(provider)
 							.build();
 				}
-			} catch(Exception ex) {
-				log.error("Exception in getMinioClient without cache: "+e.getMessage());
+			} catch (Exception e) {
+				log.error("Exception in getMinioClient with cache: " + e.getMessage());
+				try {
+					StaticProvider provider = getMinioCredentialsProvider(false);
+					log.info("provider: " + provider + ", url: " + minioClientProp.cdnBaseUrl);
+					if (provider != null) {
+						return MinioClient.builder()
+								.endpoint(minioClientProp.cdnBaseUrl)
+								.credentialsProvider(provider)
+								.build();
+					}
+				} catch (Exception ex) {
+					log.error("Exception in getMinioClient without cache: " + e.getMessage());
+				}
 			}
 		}
 		return null;
@@ -229,12 +319,14 @@ public class MinioClientService {
     	LocalDateTime localNow = LocalDateTime.now();
 		/* Expiry Date time */
 		String expiry = (String) redisCacheService.getMinioCDNCache("expiresAt");
-		LocalDateTime expiryDateTime = LocalDateTime.parse(expiry, fmt);
-		
-		if(localNow.compareTo(expiryDateTime) < 0) {
-			credentials.put("sessionToken", (String) redisCacheService.getMinioCDNCache("sessionToken"));
-			credentials.put("accessKey", (String) redisCacheService.getMinioCDNCache("accessKey"));
-			credentials.put("secretAccessKey", (String) redisCacheService.getMinioCDNCache("secretAccessKey"));
+		if(expiry != null) {
+			LocalDateTime expiryDateTime = LocalDateTime.parse(expiry, fmt);
+
+			if(localNow.compareTo(expiryDateTime) < 0) {
+				credentials.put("sessionToken", (String) redisCacheService.getMinioCDNCache("sessionToken"));
+				credentials.put("accessKey", (String) redisCacheService.getMinioCDNCache("accessKey"));
+				credentials.put("secretAccessKey", (String) redisCacheService.getMinioCDNCache("secretAccessKey"));
+			}
 		}
 		return credentials;
 	}
