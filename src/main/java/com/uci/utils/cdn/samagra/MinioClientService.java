@@ -240,7 +240,7 @@ public class MinioClientService implements FileCdnProvider {
     private MinioClient getMinioClient() {
         if (minioClientProp != null) {
             try {
-                StaticProvider provider = getMinioCredentialsProvider(true);
+                StaticProvider provider = getMinioCredentialsProvider();
                 log.info("provider: " + provider + ", url: " + minioClientProp.cdnBaseUrl);
                 if (provider != null) {
                     return MinioClient.builder()
@@ -250,18 +250,6 @@ public class MinioClientService implements FileCdnProvider {
                 }
             } catch (Exception e) {
                 log.error("Exception in getMinioClient with cache: " + e.getMessage());
-                try {
-                    StaticProvider provider = getMinioCredentialsProvider(false);
-                    log.info("provider: " + provider + ", url: " + minioClientProp.cdnBaseUrl);
-                    if (provider != null) {
-                        return MinioClient.builder()
-                                .endpoint(minioClientProp.cdnBaseUrl)
-                                .credentialsProvider(provider)
-                                .build();
-                    }
-                } catch (Exception ex) {
-                    log.error("Exception in getMinioClient without cache: " + e.getMessage());
-                }
             }
         }
         return null;
@@ -272,14 +260,13 @@ public class MinioClientService implements FileCdnProvider {
      *
      * @return
      */
-    private StaticProvider getMinioCredentialsProvider(Boolean getFromCache) {
+    private StaticProvider getMinioCredentialsProvider() {
         try {
             /* Get credentials in cache */
-            if (getFromCache) {
-                Map<String, String> cacheData = getMinioCredentialsCache();
-                if (cacheData.get("sessionToken") != null && cacheData.get("accessKey") != null && cacheData.get("secretAccessKey") != null) {
-                    return new StaticProvider(cacheData.get("accessKey"), cacheData.get("secretAccessKey"), cacheData.get("sessionToken"));
-                }
+            Map<String, String> cacheData = getMinioCredentialsCache();
+            cacheData = new HashMap();
+            if (cacheData.get("sessionToken") != null && cacheData.get("accessKey") != null && cacheData.get("secretAccessKey") != null) {
+                return new StaticProvider(cacheData.get("accessKey"), cacheData.get("secretAccessKey"), cacheData.get("sessionToken"));
             }
 
             String token = getFusionAuthToken();
