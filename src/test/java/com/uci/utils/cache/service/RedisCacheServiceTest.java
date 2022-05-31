@@ -25,9 +25,9 @@ class RedisCacheServiceTest {
     void init(){
         RedisTemplate<String, Object> obj = new RedisTemplate<>();
         redisCacheService = Mockito.spy(new RedisCacheService(obj));
-        Mockito.doReturn(obj).when(redisCacheService).getCache(anyString(), anyString());
-        Mockito.doNothing().when(redisCacheService).setCache(anyString(), anyString(), Mockito.any());
-        Mockito.doNothing().when(redisCacheService).deleteCache(anyString(), anyString());
+        Mockito.doReturn(obj).when(redisCacheService).getCache(anyString());
+        Mockito.doNothing().when(redisCacheService).setCache(anyString(), Mockito.any());
+        Mockito.doNothing().when(redisCacheService).deleteCache(anyString());
     }
 
     @Test
@@ -54,8 +54,7 @@ class RedisCacheServiceTest {
 
     @Test
     void deleteFAUserIDForAppCache() {
-        String prefix = "somePrefix";
-        redisCacheService.deleteCache(prefix, key);
+        redisCacheService.deleteCache(key);
     }
 
     @Test
