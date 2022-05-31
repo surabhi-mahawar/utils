@@ -264,7 +264,6 @@ public class MinioClientService implements FileCdnProvider {
         try {
             /* Get credentials in cache */
             Map<String, String> cacheData = getMinioCredentialsCache();
-            cacheData = new HashMap();
             if (cacheData.get("sessionToken") != null && cacheData.get("accessKey") != null && cacheData.get("secretAccessKey") != null) {
                 return new StaticProvider(cacheData.get("accessKey"), cacheData.get("secretAccessKey"), cacheData.get("sessionToken"));
             }
