@@ -66,6 +66,24 @@ public class FileUtil {
 		}
 		return false;
 	}
+
+	/**
+	 * Check if file mime type is valid
+	 * @param mime_type
+	 * @return
+	 */
+	public static boolean isValidFileType(String mime_type) {
+		ArrayList<String> list = getImageFileTypes();
+		list.addAll(getAudioFileTypes());
+		list.addAll(getVideoFileTypes());
+		list.addAll(getDocumentFileTypes());
+		for(int i=0; i < list.size(); i++) {
+			if(list.get(i).equals(mime_type)) {
+				return true;
+			}
+		}
+		return false;
+	}
 	
 	/**
 	 * Get Image file types list
