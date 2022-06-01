@@ -43,7 +43,7 @@ jobs:
 
 
       - name: Deploy
-        run: mvn clean install -Pgithub deploy -DskipTests
+        run: mvn clean install -Pgithub deploy
         env:
           GITHUB_USERNAME: ${{ secrets.USERNAME }}
           GITHUB_TOKEN: ${{ secrets.TOKEN }}

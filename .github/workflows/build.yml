@@ -27,4 +27,4 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       
       - name: Build and analyze
-        run: mvn clean install -DskipTests
+        run: mvn clean install
