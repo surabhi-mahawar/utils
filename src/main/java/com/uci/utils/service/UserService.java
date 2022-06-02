@@ -1,17 +1,24 @@
 package com.uci.utils.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.CampaignService;
+import com.uci.utils.model.FAUser;
+import com.uci.utils.model.FAUserSegment;
 import com.uci.utils.model.UserWithTemplate;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.User;
+import io.fusionauth.domain.UserRegistration;
 import io.fusionauth.domain.api.*;
+import io.fusionauth.domain.api.user.RegistrationRequest;
+import io.fusionauth.domain.api.user.RegistrationResponse;
 import io.fusionauth.domain.api.user.SearchRequest;
 import io.fusionauth.domain.api.user.SearchResponse;
 import io.fusionauth.domain.search.UserSearchCriteria;
@@ -36,31 +43,90 @@ public class UserService {
 
 	@Autowired
 	private CampaignService campaignService;
-	
+
 	@Value("${campaign.url}")
     public String CAMPAIGN_URL;
-    
+
     @Value("${campaign.admin.token}")
 	public String CAMPAIGN_ADMIN_TOKEN;
-	
+
 	@Value("${template.service.base.url:#{''}}")
 	private String baseUrlTemplate;
-
-	@Value("${fusionauth.key}")
-	private String fusionAuthKey;
 
 	@Value("${fusionauth.url}")
 	private String fusionAuthUrl;
 
+	@Autowired
 	private FusionAuthClient fusionAuthClient;
 
-	//    @Autowired
-//    @Value("${external.services.url-shortnr.baseURL}")
 	private static String shortnrBaseURL = "http://localhost:9999";
 
-	@Value("${fusionauth.key}")
-	protected void setFusionAuthClient( String key, @Value("${fusionauth.url}") String url){
-		fusionAuthClient = new FusionAuthClient(key, url);
+	/**
+	 * Create application if not exists
+	 * @param applicationID
+	 * @param applicationName
+	 * @return
+	 */
+	public Boolean createApplicationIfNotExists(UUID applicationID, String applicationName) {
+		if(findApplicationByID(applicationID)) {
+			return true;
+		} else {
+			return createApplication(applicationID, applicationName);
+		}
+	}
+
+	/**
+	 * Find application by id
+	 * @param applicationID
+	 * @return
+	 */
+	public Boolean findApplicationByID(UUID applicationID) {
+		ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplication(applicationID);
+		if(response.wasSuccessful()) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Create application with id & name
+	 * @param applicationID
+	 * @param applicationName
+	 * @return
+	 */
+	public Boolean createApplication(UUID applicationID, String applicationName) {
+		Application application = new Application()
+				.with(app -> app.id = applicationID)
+				.with(app -> app.name = applicationName);
+
+		ClientResponse<ApplicationResponse, Errors> response2 = fusionAuthClient.createApplication(applicationID, new ApplicationRequest(application, null));
+		if(response2.wasSuccessful()) {
+			log.info("succes:" +response2.successResponse);
+			return true;
+		} else {
+			log.info("Error response: "+response2.errorResponse);
+		}
+		return false;
+	}
+
+	/**
+	 * Find Fusion Auth User by Username
+	 * @param username
+	 * @return
+	 */
+	public User findFAUserByUsername(String username) {
+		ClientResponse<UserResponse, Errors> response = fusionAuthClient.retrieveUserByUsername(username);
+		if (response.wasSuccessful()) {
+			return response.successResponse.user;
+		} else if (response.errorResponse != null) {
+			Errors errors = response.errorResponse;
+			log.error("Errors in findFAUserByUsername: " + errors.toString());
+		} else if (response.exception != null) {
+			// Exception Handling
+			Exception exception = response.exception;
+			log.error("Exception in findFAUserByUsername: " + exception.toString());
+		}
+		return null;
 	}
 
 	public User findByEmail(String email) {
@@ -76,8 +142,6 @@ public class UserService {
 
 		return null;
 	}
-
-
 
 	public User findByPhone(String phone) {
 		UserSearchCriteria usc = new UserSearchCriteria();
@@ -95,23 +159,8 @@ public class UserService {
 		return null;
 	}
 
-	public User findByPhoneAndCampaign(String phone, JsonNode campaign) {
-//        FusionAuthClient staticClient = getFusionAuthClient();
-//        if(campaign != null){
-//            UserSearchCriteria usc = new UserSearchCriteria();
-//            usc.queryString = "(mobilePhone: " + phone + ") AND (memberships.groupId: " + campaign.data.get("group") +")";
-//            usc.numberOfResults = 100;
-//            SearchRequest sr = new SearchRequest(usc);
-//            ClientResponse<SearchResponse, Errors> cr = staticClient.searchUsersByQueryString(sr);
-//            if (cr.wasSuccessful()) {
-//                return cr.successResponse.users.get(0);
-//            } else if (cr.exception != null) {
-//                // Exception Handling
-//                Exception exception = cr.exception;
-//                log.error("Exception in getting users for campaign: " + exception.toString());
-//            }
-//        }
-		return null;
+	public void findAllFCMDeviceUsers() {
+//		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searc;
 	}
 
 	public List<User> findUsersForCampaign(String campaignName) throws Exception {
@@ -126,7 +175,7 @@ public class UserService {
 		 * currentApplication.data.get("group") + ")"; SearchRequest sr = new
 		 * SearchRequest(usc); ClientResponse<SearchResponse, Errors> cr =
 		 * staticClient.searchUsersByQueryString(sr);
-		 * 
+		 *
 		 * if (cr.wasSuccessful()) { return cr.successResponse.users; } else if
 		 * (cr.exception != null) { // Exception Handling Exception exception =
 		 * cr.exception; log.error("Exception in getting users for campaign: " +
@@ -159,7 +208,7 @@ public class UserService {
 
 		Set<String> userSet = new HashSet<String>();
 		Application currentApplication = campaignService.getCampaignFromNameESamwad(campaignName);
-		FusionAuthClient clientLogin = new FusionAuthClient(fusionAuthKey, fusionAuthUrl);
+		FusionAuthClient clientLogin = fusionAuthClient;
 		if (currentApplication != null) {
 			// TODO: Step 1 => Get groups for application
 			ArrayList<String> groups = (ArrayList<String>) currentApplication.data.get("group");
@@ -301,14 +350,14 @@ public class UserService {
 		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
 				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
 		MediaType mediaType = MediaType.parse("application/json");
-		
+
   		RequestBody body = RequestBody.create(mediaType, jsonData.toString());
   		Request request = new Request.Builder()
   			  .url(baseURL)
   			  .method("POST", body)
   			  .addHeader("Content-Type", "application/json")
   			  .build();
-  		
+
   		try {
   			Response response = client.newCall(request).execute();
   			log.info("response body: "+response.body());
@@ -441,7 +490,7 @@ public class UserService {
                 .writeTimeout(90, TimeUnit.SECONDS)
                 .readTimeout(90, TimeUnit.SECONDS)
                 .build();
-        
+
         MediaType mediaType = MediaType.parse("application/json");
         Request request = new Request.Builder()
                 .url(baseURL)
@@ -466,5 +515,212 @@ public class UserService {
         }
         return null;
     }
+
+	/**
+	 * Register Fusion Auth User, if already exists update
+	 * @param username
+	 * @param applicationID
+	 * @param segment
+	 * @return
+	 */
+	public ObjectNode registerUpdateFAUser(String username, UUID applicationID, FAUserSegment segment) {
+		Map<String, Object> data = new HashMap();
+		Map<String, String> device = new HashMap();
+		device.put("type", segment.getDevice().getType());
+		device.put("id", segment.getDevice().getId());
+
+		data.put("device", device);
+		if(segment.getUsers() != null && segment.getUsers().get(0) != null){
+			FAUser fauser = segment.getUsers().get(0);
+			ArrayList<Map<String, String>> users = new ArrayList();
+			Map<String, String> user = new HashMap();
+			user.put("registrationChannel", fauser.getRegistrationChannel());
+			user.put("mobilePhone", fauser.getMobilePhone());
+			user.put("username", fauser.getUsername());
+			users.add(user);
+			data.put("users", users);
+		}
+
+		User user = new User()
+						.with(usr -> usr.username = username)
+						.with(usr -> usr.password = "dummyPassword")
+						.with(usr -> usr.active = true)
+						.with(usr -> usr.data = data);
+		UserRegistration registration = new UserRegistration()
+				.with(rg -> rg.applicationId = applicationID)
+				.with(rg -> rg.username = username);
+
+		ClientResponse<RegistrationResponse, Errors> response = null;
+		User existingUser = findFAUserByUsername(username);
+
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode responseNode = mapper.createObjectNode();
+
+		if(existingUser != null) {
+			ClientResponse<UserResponse, Errors> userResponse = fusionAuthClient.updateUser(existingUser.id, new UserRequest(user));
+			if(userResponse.wasSuccessful()) {
+				UserRegistration existingRegistration = existingUser.getRegistrationForApplication(applicationID);
+				if(existingRegistration == null) {
+					response = fusionAuthClient.register(existingUser.id, new RegistrationRequest(null, registration));
+				} else {
+					responseNode.put("success", "true");
+					responseNode.put("message", "User registered.");
+					return responseNode;
+				}
+			} else if(userResponse.errorResponse != null) {
+				responseNode.put("success", "false");
+				responseNode.put("errors", userResponse.errorResponse.fieldErrors.toString());
+				return responseNode;
+			} else {
+				responseNode.put("success", "false");
+				responseNode.put("errors", "No response from Fustion Auth.");
+				return responseNode;
+			}
+		} else {
+			response = fusionAuthClient.register(null, new RegistrationRequest(user, registration));
+
+		}
+
+		if(response.wasSuccessful()) {
+			responseNode.put("success", "true");
+			responseNode.put("message", "User registered.");
+		} else if(response.errorResponse != null) {
+			responseNode.put("success", "false");
+			responseNode.put("errors", response.errorResponse.fieldErrors.toString());
+		} else {
+			responseNode.put("success", "false");
+			responseNode.put("errors", "No response from Fustion Auth.");
+		}
+		return responseNode;
+	}
+
+	/**
+	 * Create/Register Fusion Auth user
+	 * @param node
+	 * @return
+	 */
+	public ObjectNode createFAUser(ObjectNode node) {
+		OkHttpClient client = new OkHttpClient().newBuilder().build();
+		ObjectMapper mapper = new ObjectMapper();
+
+		okhttp3.RequestBody requestBody = null;
+		try {
+			String url = fusionAuthUrl+"api/user/";
+			log.info("url: "+url+", node: "+node);
+			requestBody = okhttp3.RequestBody.create(okhttp3.MediaType.parse("application/json"),  mapper.writeValueAsString(node));
+			Request request = new Request.Builder()
+					.url(url)
+					.method("POST", requestBody)
+					.addHeader("Content-Type", "application/json")
+					.addHeader("Authorization", System.getenv("FUSIONAUTH_KEY"))
+					.build();
+
+			Response response = client.newCall(request).execute();
+			String json = response.body().string();
+
+			ObjectNode responseNode = mapper.createObjectNode();
+			ObjectNode resultNode = (ObjectNode) mapper.readTree(json);
+			if(resultNode != null) {
+				if(resultNode.findValue("fieldErrors") != null) {
+					responseNode.put("success", "false");
+					ArrayNode errorsNode = mapper.createArrayNode();
+					resultNode.findValue("fieldErrors").forEach(error -> {
+						if(error.findValue("message") != null) {
+							errorsNode.add(error.findValue("message"));
+						}
+					});
+					responseNode.put("errors", errorsNode);
+				} else if(resultNode.findValue("generalErrors") != null) {
+					responseNode.put("success", "false");
+					ArrayNode errorsNode = mapper.createArrayNode();
+					resultNode.findValue("generalErrors").forEach(error -> {
+						if(error.findValue("message") != null) {
+							errorsNode.add(error.findValue("message"));
+						}
+					});
+					responseNode.put("errors", errorsNode);
+				} else {
+					responseNode.put("success", "true");
+					responseNode.put("data", resultNode);
+				}
+			} else {
+				responseNode.put("success", "false");
+				responseNode.put("errors", "No response from Fusion Auth");
+			}
+			return responseNode;
+		} catch (JsonProcessingException e) {
+			log.error("JsonProcessingException in updateFAUser: "+e.getMessage());
+		} catch (IOException e) {
+			log.error("IOException in updateFAUser: "+e.getMessage());
+		} catch (Exception e){
+			log.error("Exception in updateFAUser: "+e.getMessage());
+		}
+		return null;
+	}
+
+	/**
+	 * Update Fusion Auth user by user uuid
+	 * @param userId
+	 * @param node
+	 * @return
+	 */
+	public ObjectNode updateFAUser(String userId, ObjectNode node) {
+		OkHttpClient client = new OkHttpClient().newBuilder().build();
+		ObjectMapper mapper = new ObjectMapper();
+
+		okhttp3.RequestBody requestBody = null;
+		try {
+			String url = fusionAuthUrl+"api/user/"+userId;
+			log.info("url: "+url+", node: "+node);
+			requestBody = okhttp3.RequestBody.create(okhttp3.MediaType.parse("application/json"),  mapper.writeValueAsString(node));
+			Request request = new Request.Builder()
+					.url(url)
+					.method("PUT", requestBody)
+					.addHeader("Content-Type", "application/json")
+					.addHeader("Authorization", System.getenv("FUSIONAUTH_KEY"))
+					.build();
+
+			Response response = client.newCall(request).execute();
+			String json = response.body().string();
+
+			ObjectNode responseNode = mapper.createObjectNode();
+			ObjectNode resultNode = (ObjectNode) mapper.readTree(json);
+			if(resultNode != null) {
+				if(resultNode.findValue("fieldErrors") != null) {
+					responseNode.put("success", "false");
+					ArrayNode errorsNode = mapper.createArrayNode();
+					resultNode.findValue("fieldErrors").forEach(error -> {
+						if(error.findValue("message") != null) {
+							errorsNode.add(error.findValue("message"));
+						}
+					});
+					responseNode.put("errors", errorsNode);
+				} else if(resultNode.findValue("generalErrors") != null) {
+					responseNode.put("success", "false");
+					ArrayNode errorsNode = mapper.createArrayNode();
+					resultNode.findValue("generalErrors").forEach(error -> {
+						if(error.findValue("message") != null) {
+							errorsNode.add(error.findValue("message"));
+						}
+					});
+					responseNode.put("errors", errorsNode);
+				} else {
+					responseNode.put("success", "true");
+					responseNode.put("data", resultNode);
+				}
+			} else {
+				responseNode.put("success", "false");
+				responseNode.put("errors", "No response from Fusion Auth");
+			}
+			return responseNode;
+		} catch (JsonProcessingException e) {
+			log.error("JsonProcessingException in updateFAUser: "+e.getMessage());
+		} catch (IOException e) {
+			log.error("IOException in updateFAUser: "+e.getMessage());
+		} catch (Exception e){
+			log.error("Exception in updateFAUser: "+e.getMessage());
+		}
+		return null;
+	}
 }
 //%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%95%E0%A4%BE%E0%A4%B0%20Singh%20Reena%20Vijay%20Bahadur%20%E0%A4%9C%E0%A5%80!%0A%0A%E0%A4%AE%E0%A4%BF%E0%A4%B6%E0%A4%A8%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A5%87%E0%A4%B0%E0%A4%A3%E0%A4%BE%20%E0%A4%B8%E0%A5%87%20%E0%A4%9C%E0%A5%81%E0%A5%9C%E0%A4%A8%E0%A5%87%20%E0%A4%95%E0%A5%87%20%E0%A4%B2%E0%A4%BF%E0%A4%8F%20%E0%A4%86%E0%A4%AA%E0%A4%95%E0%A4%BE%20%E0%A4%A7%E0%A4%A8%E0%A5%8D%E0%A4%AF%E0%A4%B5%E0%A4%BE%E0%A4%A6%E0%A5%A4%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A4%E0%A4%BF%20%E0%A4%AE%E0%A4%BE%E0%A4%B9%20%E0%A4%86%E0%A4%AA%E0%A4%95%E0%A5%87%20%E0%A4%A8%E0%A5%8D%E0%A4%AF%E0%A4%BE%E0%A4%AF%20%E0%A4%AA%E0%A4%82%E0%A4%9A%E0%A4%BE%E0%A4%AF%E0%A4%A4%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B6%E0%A4%BF%E0%A4%95%E0%A5%8D%E0%A4%B7%E0%A4%95%20%E0%A4%B8%E0%A4%82%E0%A4%95%E0%A5%81%E0%A4%B2%20%E0%A4%A6%E0%A5%8D%E0%A4%B5%E0%A4%BE%E0%A4%B0%E0%A4%BE%20%E0%A4%B8%E0%A4%AD%E0%A5%80%20%E0%A4%B6%E0%A4%BF%E0%A4%95%E0%A5%8D%E0%A4%B7%E0%A4%95%E0%A5%8B%E0%A4%82%20%E0%A4%8F%E0%A4%B5%E0%A4%82%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A7%E0%A4%BE%E0%A4%A8%E0%A4%BE%E0%A4%A7%E0%A5%8D%E0%A4%AF%E0%A4%BE%E0%A4%AA%E0%A4%95%E0%A5%8B%E0%A4%82%20%E0%A4%95%E0%A5%80%20%E0%A4%8F%E0%A4%95%20%E0%A4%AC%E0%A5%88%E0%A4%A0%E0%A4%95/%E0%A4%95%E0%A4%BE%E0%A4%B0%E0%A5%8D%E0%A4%AF%E0%A4%B6%E0%A4%BE%E0%A4%B2%E0%A4%BE%20%E0%A4%86%E0%A4%AF%E0%A5%8B%E0%A4%9C%E0%A4%BF%E0%A4%A4%20%E0%A4%95%E0%A5%80%20%E0%A4%9C%E0%A4%BE%E0%A4%A8%E0%A5%80%20%E0%A4%B9%E0%A5%88%20I%20%0A%0A%E0%A4%87%E0%A4%B8%20%E0%A4%B5%E0%A5%8D%E0%A4%B9%E0%A4%BE%E0%A4%9F%E0%A5%8D%E0%A4%B8%E0%A4%AA%E0%A5%8D%E0%A4%AA%20%E0%A4%A8%E0%A4%82%E0%A4%AC%E0%A4%B0%20%E0%A4%95%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A7%E0%A5%8D%E0%A4%AF%E0%A4%AE%20%E0%A4%B8%E0%A5%87%20%E0%A4%87%E0%A4%B8%20%E0%A4%AC%E0%A5%88%E0%A4%A0%E0%A4%95%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A4%E0%A4%BF%E0%A4%AD%E0%A4%BE%E0%A4%97%20%E0%A4%95%E0%A4%B0%E0%A4%A8%E0%A5%87%20%E0%A4%95%E0%A5%87%20%E0%A4%AC%E0%A4%BE%E0%A4%A6%20%E0%A4%95%E0%A5%81%E0%A4%9B%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%B6%E0%A5%8D%E0%A4%A8%E0%A5%8B%E0%A4%82%20%E0%A4%95%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A7%E0%A5%8D%E0%A4%AF%E0%A4%AE%20%E0%A4%B8%E0%A5%87%20%E0%A4%85%E0%A4%AA%E0%A4%A8%E0%A4%BE%20feedback%20%E0%A4%A6%E0%A5%87%E0%A4%82%20I%20*Feedback%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%86%E0%A4%AA%E0%A4%95%E0%A5%8B%205-7%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%B6%E0%A5%8D%E0%A4%A8%E0%A5%8B%E0%A4%82%20%E0%A4%95%E0%A4%BE%20%E0%A4%89%E0%A4%A4%E0%A5%8D%E0%A4%A4%E0%A4%B0%20%E0%A4%A6%E0%A5%87%E0%A4%A8%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A4%BE,%20%E0%A4%9C%E0%A4%BF%E0%A4%B8%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%BF%E0%A4%B0%E0%A5%8D%E0%A4%AB%202%20%E0%A4%AE%E0%A4%BF%E0%A4%A8%E0%A4%9F%20%E0%A4%B2%E0%A4%97%E0%A5%87%E0%A4%82%E0%A4%97%E0%A5%87I*%0A%0AFeedback%20%E0%A4%AD%E0%A4%B0%E0%A4%A8%E0%A5%87%20%E0%A4%95%E0%A5%87%20%E0%A4%B2%E0%A4%BF%E0%A4%8F%20%E0%A4%A8%E0%A5%80%E0%A4%9A%E0%A5%87%20%E0%A4%A6%E0%A4%BF%E0%A4%8F%20%E0%A4%97%E0%A4%8F%20%E0%A4%AC%E0%A4%9F%E0%A4%A8%20%E2%80%98*%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%95%E0%A4%BE%E0%A4%B0%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A5%87%E0%A4%B0%E0%A4%A3%E0%A4%BE%20%E0%A4%AC%E0%A5%89%E0%A4%9F*%E2%80%99%20%E0%A4%AA%E0%A4%B0%20%E0%A4%95%E0%A5%8D%E0%A4%B2%E0%A4%BF%E0%A4%95%20%E0%A4%95%E0%A4%B0%E0%A5%87%E0%A4%82%20I%0A%0A%E0%A4%A7%E0%A4%A8%E0%A5%8D%E0%A4%AF%E0%A4%B5%E0%A4%BE%E0%A4%A6!%20%0A%E0%A4%AC%E0%A5%87%E0%A4%B8%E0%A4%BF%E0%A4%95%20%E0%A4%B6%E0%A4%BF%E0%A4%95%E0%A5%8D%E0%A4%B7%E0%A4%BE%20%E0%A4%B5%E0%A4%BF%E0%A4%AD%E0%A4%BE%E0%A4%97
