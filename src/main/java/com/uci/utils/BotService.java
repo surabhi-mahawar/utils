@@ -305,6 +305,7 @@ public class BotService {
 					
 	}
 
+	
 	public Application getButtonLinkedApp(String appName) {
 		try {
 			Application application = getCampaignFromName(appName);
